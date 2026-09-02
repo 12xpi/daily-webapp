@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Молитвы и размышление</title>
+
+<!-- iOS home screen behavior -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Молитва">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#EAE6DC">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main class="page">
+  <div class="date" id="date"></div>
+
+  <section class="block" id="prayer1">
+    <p class="prayer-text"></p>
+  </section>
+
+  <hr class="rule">
+
+  <section class="block" id="prayer2">
+    <p class="prayer-text"></p>
+  </section>
+
+  <hr class="rule rule--wide">
+
+  <section class="block reflection" id="reflection">
+    <h1 class="reflection-title"></h1>
+    <p class="reflection-desc"></p>
+    <div class="reflection-content"></div>
+    <p class="reflection-source"></p>
+  </section>
+
+  <hr class="rule rule--wide">
+
+  <nav class="step-prayers" id="stepPrayers"></nav>
+
+  <p class="empty-state" id="empty" hidden>Не удалось найти материалы на сегодня.</p>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
