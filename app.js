@@ -8,6 +8,27 @@
     'четверг', 'пятница', 'суббота'
   ];
 
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // Supports **bold** and *italic*. Escapes HTML first so raw text stays safe,
+  // then converts markdown-style markers to <strong>/<em>.
+  // Line breaks (\n) are left as-is; CSS white-space:pre-line renders them.
+  function formatText(str) {
+    let out = escapeHtml(str);
+    out = out.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
+    out = out.replace(/\*([\s\S]+?)\*/g, '<em>$1</em>');
+    return out;
+  }
+
+  function setFormatted(el, str) {
+    el.innerHTML = formatText(str);
+  }
+
   function pad2(n) {
     return String(n).padStart(2, '0');
   }
@@ -60,12 +81,12 @@
       return;
     }
 
-    document.querySelector('#prayer1 .prayer-text').textContent = pair.classic;
-    document.querySelector('#prayer2 .prayer-text').textContent = pair.personal;
+    setFormatted(document.querySelector('#prayer1 .prayer-text'), pair.classic);
+    setFormatted(document.querySelector('#prayer2 .prayer-text'), pair.personal);
 
     document.querySelector('.reflection-title').textContent = reflection.title;
-    document.querySelector('.reflection-desc').textContent = reflection.description;
-    document.querySelector('.reflection-content').textContent = reflection.content;
+    setFormatted(document.querySelector('.reflection-desc'), reflection.description);
+    setFormatted(document.querySelector('.reflection-content'), reflection.content);
     document.querySelector('.reflection-source').textContent = reflection.sources;
   }
 
@@ -86,7 +107,7 @@
 
       const text = document.createElement('p');
       text.className = 'step-prayer-text';
-      text.textContent = item.text;
+      setFormatted(text, item.text);
       body.appendChild(text);
 
       if (item.source) {
