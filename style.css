@@ -206,6 +206,118 @@ body {
   margin-bottom: 0;
 }
 
+.book-ref {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  margin: 0;
+  cursor: pointer;
+  color: var(--mark);
+  line-height: 0;
+  vertical-align: middle;
+  display: inline-flex;
+  opacity: 0.7;
+}
+
+.book-ref:active {
+  opacity: 1;
+}
+
+.book-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--paper);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+}
+
+.book-overlay[hidden] {
+  display: none;
+}
+
+.book-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(16px, env(safe-area-inset-top)) 20px 14px;
+  border-bottom: 1px solid var(--rule);
+  flex-shrink: 0;
+}
+
+.book-title {
+  font-family: 'PT Sans', -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--mark);
+  letter-spacing: 0.03em;
+}
+
+.book-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+}
+
+.book-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 24px 24px 80px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.book-block {
+  margin-bottom: 22px;
+  border-radius: 4px;
+  transition: background-color 1.6s ease;
+  padding: 2px 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+}
+
+.book-block.book-highlight {
+  background-color: rgba(69, 86, 74, 0.14);
+  transition: background-color 0.2s ease;
+}
+
+.book-label {
+  font-family: 'PT Sans', -apple-system, sans-serif;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+.book-text {
+  font-size: 16px;
+  line-height: 1.65;
+  white-space: pre-line;
+  margin: 0;
+}
+
+.book-part-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 36px 0 4px;
+}
+
+.book-block:first-child .book-part-title {
+  margin-top: 4px;
+}
+
+.book-part-subtitle {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
 @media (max-width: 400px) {
   .page {
     padding-left: 20px;

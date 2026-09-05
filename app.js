@@ -9,6 +9,10 @@
   ];
 
   let glossary = {};
+  let ethicsBlocks = null;
+  let ethicsLoadingPromise = null;
+
+  const BOOK_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" fill="currentColor"/></svg>';
 
   function escapeHtml(str) {
     return str
@@ -17,7 +21,8 @@
       .replace(/>/g, '&gt;');
   }
 
-  // Supports **bold**, *italic*, and [[term]] / [[displayText|term]] tappable glossary words.
+  // Supports **bold**, *italic*, [[term]] / [[displayText|term]] glossary words,
+  // and {{blockId}} tappable references into data/ethics.json.
   // Escapes HTML first so raw text stays safe, then converts markers to tags.
   // Line breaks (\n) are left as-is; CSS white-space:pre-line renders them.
   function formatText(str) {
@@ -27,6 +32,9 @@
     out = out.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, display, key) => {
       const term = (key || display).trim();
       return `<span class="term" data-term="${escapeHtml(term)}">${display}</span>`;
+    });
+    out = out.replace(/\{\{([^}]+)\}\}/g, (match, id) => {
+      return `<button type="button" class="book-ref" data-ref="${escapeHtml(id.trim())}" aria-label="Открыть в тексте книги">${BOOK_ICON}</button>`;
     });
     return out;
   }
@@ -54,10 +62,91 @@
         openGlossary(term.dataset.term);
         return;
       }
+      const ref = e.target.closest('.book-ref');
+      if (ref) {
+        openBook(ref.dataset.ref);
+        return;
+      }
       if (e.target.id === 'modalOverlay') {
         closeGlossary();
       }
+      if (e.target.id === 'bookClose') {
+        closeBook();
+      }
     });
+  }
+
+  async function ensureEthicsLoaded() {
+    if (ethicsBlocks) return ethicsBlocks;
+    if (!ethicsLoadingPromise) {
+      ethicsLoadingPromise = loadJSON('data/ethics.json').then(data => {
+        ethicsBlocks = data;
+        return data;
+      });
+    }
+    return ethicsLoadingPromise;
+  }
+
+  function renderBook(blocks) {
+    const body = document.getElementById('bookBody');
+    if (body.dataset.rendered) return;
+
+    const frag = document.createDocumentFragment();
+    blocks.forEach(b => {
+      const el = document.createElement('div');
+      el.className = 'book-block';
+      el.id = 'book-' + b.id;
+
+      if (b.type === 'part_title') {
+        const h = document.createElement('h2');
+        h.className = 'book-part-title';
+        h.textContent = b.label;
+        el.appendChild(h);
+
+        const sub = document.createElement('p');
+        sub.className = 'book-part-subtitle';
+        sub.textContent = b.text;
+        el.appendChild(sub);
+      } else {
+        const label = document.createElement('div');
+        label.className = 'book-label';
+        label.textContent = b.label;
+        el.appendChild(label);
+
+        const text = document.createElement('p');
+        text.className = 'book-text';
+        text.textContent = b.text;
+        el.appendChild(text);
+      }
+
+      frag.appendChild(el);
+    });
+
+    body.appendChild(frag);
+    body.dataset.rendered = 'true';
+  }
+
+  async function openBook(refId) {
+    let blocks;
+    try {
+      blocks = await ensureEthicsLoaded();
+    } catch (e) {
+      return;
+    }
+    renderBook(blocks);
+    document.getElementById('bookOverlay').hidden = false;
+
+    requestAnimationFrame(() => {
+      const target = document.getElementById('book-' + refId);
+      if (!target) return;
+      target.scrollIntoView({ block: 'center', behavior: 'instant' });
+      target.classList.add('book-highlight');
+      setTimeout(() => target.classList.remove('book-highlight'), 1800);
+    });
+  }
+
+  function closeBook() {
+    document.getElementById('bookOverlay').hidden = true;
   }
 
   function pad2(n) {
