@@ -8,6 +8,8 @@
     'четверг', 'пятница', 'суббота'
   ];
 
+  let glossary = {};
+
   function escapeHtml(str) {
     return str
       .replace(/&/g, '&amp;')
@@ -15,18 +17,47 @@
       .replace(/>/g, '&gt;');
   }
 
-  // Supports **bold** and *italic*. Escapes HTML first so raw text stays safe,
-  // then converts markdown-style markers to <strong>/<em>.
+  // Supports **bold**, *italic*, and [[term]] / [[displayText|term]] tappable glossary words.
+  // Escapes HTML first so raw text stays safe, then converts markers to tags.
   // Line breaks (\n) are left as-is; CSS white-space:pre-line renders them.
   function formatText(str) {
     let out = escapeHtml(str);
     out = out.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
     out = out.replace(/\*([\s\S]+?)\*/g, '<em>$1</em>');
+    out = out.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, display, key) => {
+      const term = (key || display).trim();
+      return `<span class="term" data-term="${escapeHtml(term)}">${display}</span>`;
+    });
     return out;
   }
 
   function setFormatted(el, str) {
     el.innerHTML = formatText(str);
+  }
+
+  function openGlossary(term) {
+    const definition = glossary[term];
+    if (!definition) return;
+    const card = document.getElementById('modalCard');
+    card.innerHTML = `<p>${formatText(definition)}</p>`;
+    document.getElementById('modalOverlay').hidden = false;
+  }
+
+  function closeGlossary() {
+    document.getElementById('modalOverlay').hidden = true;
+  }
+
+  function setupGlossaryHandlers() {
+    document.addEventListener('click', (e) => {
+      const term = e.target.closest('.term');
+      if (term) {
+        openGlossary(term.dataset.term);
+        return;
+      }
+      if (e.target.id === 'modalOverlay') {
+        closeGlossary();
+      }
+    });
   }
 
   function pad2(n) {
@@ -68,6 +99,12 @@
     } catch (e) {
       showEmpty();
       return;
+    }
+
+    try {
+      glossary = await loadJSON('data/glossary.json');
+    } catch (e) {
+      glossary = {};
     }
 
     renderStepPrayers(stepPrayers);
@@ -131,4 +168,5 @@
   }
 
   init();
+  setupGlossaryHandlers();
 })();
