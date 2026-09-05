@@ -212,11 +212,17 @@ body {
   padding: 0 2px;
   margin: 0;
   cursor: pointer;
-  color: var(--mark);
+  color: #9C818C;
   line-height: 0;
   vertical-align: middle;
   display: inline-flex;
-  opacity: 0.7;
+  opacity: 0.85;
+}
+
+.book-ref svg {
+  width: 19px;
+  height: 19px;
+  display: block;
 }
 
 .book-ref:active {
@@ -230,6 +236,7 @@ body {
   z-index: 200;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .book-overlay[hidden] {
@@ -265,6 +272,7 @@ body {
 .book-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding: 24px 24px 80px;
   max-width: 600px;
@@ -279,6 +287,8 @@ body {
   padding: 2px 8px;
   margin-left: -8px;
   margin-right: -8px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .book-block.book-highlight {
