@@ -30,27 +30,23 @@ body {
 
 .hero {
   position: relative;
-  border-radius: 10px;
+  margin: 0 -24px;
   overflow: hidden;
-  margin-bottom: 36px;
 }
 
 .hero-image {
   width: 100%;
-  height: 130px;
+  height: 160px;
   object-fit: cover;
   display: block;
 }
 
-.hero-date {
-  position: absolute;
-  top: 14px;
-  left: 16px;
+.date {
   font-family: 'PT Sans', -apple-system, sans-serif;
   font-size: 14px;
-  color: #FFFFFF;
+  color: var(--mark);
+  margin: 16px 0 40px;
   letter-spacing: 0.02em;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 
 .block {
