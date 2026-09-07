@@ -163,7 +163,7 @@
     const day = date.getDate();
     const month = MONTHS_GENITIVE[date.getMonth()];
     const weekday = WEEKDAYS[date.getDay()];
-    return `${day} ${month}, ${weekday}`;
+    return { day, month, weekday };
   }
 
   async function loadJSON(path) {
@@ -176,14 +176,18 @@
     const today = new Date();
     const key = `${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
 
-    document.getElementById('date').textContent = formatDate(today);
+    const { day, month, weekday } = formatDate(today);
+    document.getElementById('dateWeekday').textContent = weekday;
+    document.getElementById('dateDay').textContent = day;
+    document.getElementById('dateMonth').textContent = month;
 
-    let reflections, prayers, stepPrayers;
+    let reflections, prayers, aaPrayers, spinoza;
     try {
-      [reflections, prayers, stepPrayers] = await Promise.all([
+      [reflections, prayers, aaPrayers, spinoza] = await Promise.all([
         loadJSON('data/reflections.json'),
         loadJSON('data/prayers.json'),
-        loadJSON('data/step_prayers.json')
+        loadJSON('data/aa_prayers.json'),
+        loadJSON('data/spinoza.json')
       ]);
     } catch (e) {
       showEmpty();
@@ -196,7 +200,7 @@
       glossary = {};
     }
 
-    renderStepPrayers(stepPrayers);
+    renderStepPrayers(aaPrayers, spinoza);
 
     const reflection = reflections[key];
     const pairIndex = dayOfYear(today) % prayers.length;
@@ -216,36 +220,55 @@
     document.querySelector('.reflection-source').textContent = reflection.sources;
   }
 
-  function renderStepPrayers(list) {
+  function buildStepPrayer(item) {
+    const details = document.createElement('details');
+    details.className = 'step-prayer';
+
+    const summary = document.createElement('summary');
+    summary.textContent = item.title;
+    details.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'step-prayer-body';
+
+    const text = document.createElement('p');
+    text.className = 'step-prayer-text';
+    setFormatted(text, item.text);
+    body.appendChild(text);
+
+    if (item.source) {
+      const source = document.createElement('p');
+      source.className = 'step-prayer-source';
+      source.textContent = item.source;
+      body.appendChild(source);
+    }
+
+    details.appendChild(body);
+    return details;
+  }
+
+  function renderStepPrayers(aaPrayers, spinoza) {
     const nav = document.getElementById('stepPrayers');
-    if (!Array.isArray(list) || list.length === 0) return;
 
-    list.forEach(item => {
-      const details = document.createElement('details');
-      details.className = 'step-prayer';
+    if (Array.isArray(spinoza)) {
+      spinoza.forEach(item => nav.appendChild(buildStepPrayer(item)));
+    }
 
-      const summary = document.createElement('summary');
-      summary.textContent = item.title;
-      details.appendChild(summary);
+    if (Array.isArray(aaPrayers) && aaPrayers.length > 0) {
+      const group = document.createElement('details');
+      group.className = 'prayer-group';
 
-      const body = document.createElement('div');
-      body.className = 'step-prayer-body';
+      const groupSummary = document.createElement('summary');
+      groupSummary.textContent = 'Молитвы АА';
+      group.appendChild(groupSummary);
 
-      const text = document.createElement('p');
-      text.className = 'step-prayer-text';
-      setFormatted(text, item.text);
-      body.appendChild(text);
+      const groupBody = document.createElement('div');
+      groupBody.className = 'prayer-group-body';
+      aaPrayers.forEach(item => groupBody.appendChild(buildStepPrayer(item)));
+      group.appendChild(groupBody);
 
-      if (item.source) {
-        const source = document.createElement('p');
-        source.className = 'step-prayer-source';
-        source.textContent = item.source;
-        body.appendChild(source);
-      }
-
-      details.appendChild(body);
-      nav.appendChild(details);
-    });
+      nav.appendChild(group);
+    }
   }
 
   function showEmpty() {

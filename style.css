@@ -12,6 +12,7 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -20,6 +21,7 @@ body {
   color: var(--ink);
   font-family: 'PT Serif', Georgia, serif;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 .page {
@@ -30,23 +32,52 @@ body {
 
 .hero {
   position: relative;
-  margin: 0 -24px;
+  margin: 0 -24px 36px;
   overflow: hidden;
 }
 
 .hero-image {
   width: 100%;
-  height: 160px;
+  height: 190px;
   object-fit: cover;
   display: block;
 }
 
-.date {
+.hero-date {
+  position: absolute;
+  left: 24px;
+  bottom: 20px;
+  color: #FFFFFF;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.hero-date-weekday {
   font-family: 'PT Sans', -apple-system, sans-serif;
-  font-size: 14px;
-  color: var(--mark);
-  margin: 16px 0 40px;
+  font-size: 15px;
+  font-weight: 400;
   letter-spacing: 0.02em;
+  line-height: 1;
+  margin-bottom: 1px;
+}
+
+.hero-date-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.hero-date-day {
+  font-family: 'PT Serif', Georgia, serif;
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.hero-date-month {
+  font-family: 'PT Sans', -apple-system, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.2;
 }
 
 .block {
@@ -104,6 +135,55 @@ body {
 .step-prayers {
   display: flex;
   flex-direction: column;
+}
+
+.prayer-group {
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.prayer-group summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  font-family: 'PT Sans', -apple-system, sans-serif;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.prayer-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.prayer-group summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid var(--mark);
+  border-bottom: 1.5px solid var(--mark);
+  transform: rotate(-45deg);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.prayer-group[open] summary::after {
+  transform: rotate(45deg);
+}
+
+.prayer-group-body {
+  padding-bottom: 4px;
+}
+
+.prayer-group-body .step-prayer {
+  padding-left: 24px;
+}
+
+.prayer-group-body .step-prayer:first-child {
+  border-top: 1px solid var(--rule);
 }
 
 .step-prayer {
