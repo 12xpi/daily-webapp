@@ -181,13 +181,14 @@
     document.getElementById('dateDay').textContent = day;
     document.getElementById('dateMonth').textContent = month;
 
-    let reflections, prayers, aaPrayers, spinoza;
+    let reflections, prayers, aaPrayers, spinoza, aaProtocols;
     try {
-      [reflections, prayers, aaPrayers, spinoza] = await Promise.all([
+      [reflections, prayers, aaPrayers, spinoza, aaProtocols] = await Promise.all([
         loadJSON('data/reflections.json'),
         loadJSON('data/prayers.json'),
         loadJSON('data/aa_prayers.json'),
-        loadJSON('data/spinoza.json')
+        loadJSON('data/spinoza.json'),
+        loadJSON('data/aa_protocols.json')
       ]);
     } catch (e) {
       showEmpty();
@@ -200,7 +201,7 @@
       glossary = {};
     }
 
-    renderStepPrayers(aaPrayers, spinoza);
+    renderStepPrayers(aaPrayers, spinoza, aaProtocols);
 
     const reflection = reflections[key];
     const pairIndex = dayOfYear(today) % prayers.length;
@@ -247,7 +248,23 @@
     return details;
   }
 
-  function renderStepPrayers(aaPrayers, spinoza) {
+  function buildPrayerGroup(title, items) {
+    const group = document.createElement('details');
+    group.className = 'prayer-group';
+
+    const groupSummary = document.createElement('summary');
+    groupSummary.textContent = title;
+    group.appendChild(groupSummary);
+
+    const groupBody = document.createElement('div');
+    groupBody.className = 'prayer-group-body';
+    items.forEach(item => groupBody.appendChild(buildStepPrayer(item)));
+    group.appendChild(groupBody);
+
+    return group;
+  }
+
+  function renderStepPrayers(aaPrayers, spinoza, aaProtocols) {
     const nav = document.getElementById('stepPrayers');
 
     if (Array.isArray(spinoza)) {
@@ -255,19 +272,11 @@
     }
 
     if (Array.isArray(aaPrayers) && aaPrayers.length > 0) {
-      const group = document.createElement('details');
-      group.className = 'prayer-group';
+      nav.appendChild(buildPrayerGroup('Молитвы АА', aaPrayers));
+    }
 
-      const groupSummary = document.createElement('summary');
-      groupSummary.textContent = 'Молитвы АА';
-      group.appendChild(groupSummary);
-
-      const groupBody = document.createElement('div');
-      groupBody.className = 'prayer-group-body';
-      aaPrayers.forEach(item => groupBody.appendChild(buildStepPrayer(item)));
-      group.appendChild(groupBody);
-
-      nav.appendChild(group);
+    if (Array.isArray(aaProtocols) && aaProtocols.length > 0) {
+      nav.appendChild(buildPrayerGroup('Протоколы АА', aaProtocols));
     }
   }
 
