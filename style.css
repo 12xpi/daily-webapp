@@ -421,6 +421,58 @@ body {
   font-size: 17px;
 }
 
+.letter-block {
+  margin-bottom: 44px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.letter-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 16px;
+  font-style: italic;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.letter-meta-from {
+  font-weight: 700;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.letter-subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin-bottom: 20px;
+}
+
+.letter-salutation {
+  font-size: 16px;
+  margin: 0 0 14px;
+}
+
+.letter-place-date {
+  font-family: 'PT Sans', -apple-system, sans-serif;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 18px;
+  text-align: right;
+}
+
+.letter-number {
+  font-family: 'PT Serif', Georgia, serif;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  margin-bottom: 16px;
+}
+
 @media (max-width: 400px) {
   .page {
     padding-left: 20px;

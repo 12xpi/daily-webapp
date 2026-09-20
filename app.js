@@ -33,8 +33,14 @@
       const term = (key || display).trim();
       return `<span class="term" data-term="${escapeHtml(term)}">${display}</span>`;
     });
-    out = out.replace(/\{\{([^}]+)\}\}/g, (match, id) => {
-      return `<button type="button" class="book-ref" data-ref="${escapeHtml(id.trim())}" aria-label="Открыть в тексте книги">${BOOK_ICON}</button>`;
+    out = out.replace(/\{\{([^}]+)\}\}/g, (match, ref) => {
+      let refType = 'ethics';
+      let id = ref.trim();
+      if (id.startsWith('letter:')) {
+        refType = 'letter';
+        id = id.slice('letter:'.length).trim();
+      }
+      return `<button type="button" class="book-ref" data-ref-type="${refType}" data-ref="${escapeHtml(id)}" aria-label="Открыть в тексте книги">${BOOK_ICON}</button>`;
     });
     return out;
   }
@@ -64,7 +70,11 @@
       }
       const ref = e.target.closest('.book-ref');
       if (ref) {
-        openBook(ref.dataset.ref);
+        if (ref.dataset.refType === 'letter') {
+          openLetter(ref.dataset.ref);
+        } else {
+          openBook(ref.dataset.ref);
+        }
         return;
       }
       if (e.target.id === 'modalOverlay') {
@@ -72,6 +82,9 @@
       }
       if (e.target.id === 'bookClose') {
         closeBook();
+      }
+      if (e.target.id === 'lettersClose') {
+        closeLetters();
       }
     });
   }
@@ -147,6 +160,103 @@
 
   function closeBook() {
     document.getElementById('bookOverlay').hidden = true;
+  }
+
+  let lettersData = null;
+  let lettersLoadingPromise = null;
+
+  async function ensureLettersLoaded() {
+    if (lettersData) return lettersData;
+    if (!lettersLoadingPromise) {
+      lettersLoadingPromise = loadJSON('data/letters.json').then(data => {
+        lettersData = data;
+        return data;
+      });
+    }
+    return lettersLoadingPromise;
+  }
+
+  function renderLetters(letters) {
+    const body = document.getElementById('lettersBody');
+    if (body.dataset.rendered) return;
+
+    const frag = document.createDocumentFragment();
+    letters.forEach(letter => {
+      const el = document.createElement('div');
+      el.className = 'book-block letter-block';
+      el.id = 'letter-' + letter.id;
+
+      const label = document.createElement('div');
+      label.className = 'letter-number';
+      label.textContent = 'Письмо ' + letter.number;
+      el.appendChild(label);
+
+      const meta = document.createElement('div');
+      meta.className = 'letter-meta';
+      const to = document.createElement('span');
+      to.className = 'letter-meta-to';
+      to.textContent = letter.to_full || letter.to || '';
+      const from = document.createElement('span');
+      from.className = 'letter-meta-from';
+      from.textContent = letter.from ? 'от ' + letter.from : '';
+      meta.appendChild(to);
+      meta.appendChild(from);
+      el.appendChild(meta);
+
+      if (letter.subtitle) {
+        const subtitle = document.createElement('div');
+        subtitle.className = 'letter-subtitle';
+        subtitle.textContent = letter.subtitle;
+        el.appendChild(subtitle);
+      }
+
+      if (letter.salutation) {
+        const salutation = document.createElement('p');
+        salutation.className = 'letter-salutation';
+        salutation.textContent = letter.salutation;
+        el.appendChild(salutation);
+      }
+
+      const text = document.createElement('p');
+      text.className = 'book-text';
+      setFormatted(text, letter.text);
+      el.appendChild(text);
+
+      if (letter.place_date) {
+        const placeDate = document.createElement('p');
+        placeDate.className = 'letter-place-date';
+        placeDate.textContent = letter.place_date;
+        el.appendChild(placeDate);
+      }
+
+      frag.appendChild(el);
+    });
+
+    body.appendChild(frag);
+    body.dataset.rendered = 'true';
+  }
+
+  async function openLetter(refId) {
+    let letters;
+    try {
+      letters = await ensureLettersLoaded();
+    } catch (e) {
+      return;
+    }
+    renderLetters(letters);
+    document.getElementById('lettersOverlay').hidden = false;
+
+    requestAnimationFrame(() => {
+      const target = document.getElementById('letter-' + refId);
+      if (!target) return;
+      target.scrollIntoView({ block: 'start', behavior: 'instant' });
+      target.classList.add('book-highlight');
+      setTimeout(() => target.classList.remove('book-highlight'), 1800);
+    });
+  }
+
+  function closeLetters() {
+    document.getElementById('lettersOverlay').hidden = true;
   }
 
   function pad2(n) {
