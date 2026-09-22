@@ -14,6 +14,8 @@
 
   const BOOK_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" fill="currentColor"/></svg>';
 
+  const DIVIDER_ICON = '<span class="text-divider" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 1c0 4.2 1 8.3 3 10.2 1.4 1.3 4 1.7 8 1.8-4 .1-6.6.5-8 1.8-2 1.9-3 6-3 10.2 0-4.2-1-8.3-3-10.2-1.4-1.3-4-1.7-8-1.8 4-.1 6.6-.5 8-1.8 2-1.9 3-6 3-10.2z" fill="currentColor"/></svg></span>';
+
   function escapeHtml(str) {
     return str
       .replace(/&/g, '&amp;')
@@ -25,7 +27,9 @@
   // and {{blockId}} tappable references into data/ethics.json.
   // Escapes HTML first so raw text stays safe, then converts markers to tags.
   // Line breaks (\n) are left as-is; CSS white-space:pre-line renders them.
-  function formatText(str) {
+  // When withDividers is true, blank lines between paragraphs (\n\n) are
+  // rendered as a small cross-icon divider instead of extra vertical space.
+  function formatText(str, withDividers) {
     let out = escapeHtml(str);
     out = out.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
     out = out.replace(/\*([\s\S]+?)\*/g, '<em>$1</em>');
@@ -42,11 +46,14 @@
       }
       return `<button type="button" class="book-ref" data-ref-type="${refType}" data-ref="${escapeHtml(id)}" aria-label="Открыть в тексте книги">${BOOK_ICON}</button>`;
     });
+    if (withDividers) {
+      out = out.replace(/\n{2,}/g, `\n${DIVIDER_ICON}\n`);
+    }
     return out;
   }
 
-  function setFormatted(el, str) {
-    el.innerHTML = formatText(str);
+  function setFormatted(el, str, withDividers) {
+    el.innerHTML = formatText(str, withDividers);
   }
 
   function openGlossary(term) {
@@ -331,7 +338,7 @@
     document.querySelector('.reflection-source').textContent = reflection.sources;
   }
 
-  function buildStepPrayer(item) {
+  function buildStepPrayer(item, withDividers) {
     const details = document.createElement('details');
     details.className = 'step-prayer';
 
@@ -344,7 +351,7 @@
 
     const text = document.createElement('p');
     text.className = 'step-prayer-text';
-    setFormatted(text, item.text);
+    setFormatted(text, item.text, withDividers);
     body.appendChild(text);
 
     if (item.source) {
@@ -378,7 +385,7 @@
     const nav = document.getElementById('stepPrayers');
 
     if (Array.isArray(spinoza)) {
-      spinoza.forEach(item => nav.appendChild(buildStepPrayer(item)));
+      spinoza.forEach(item => nav.appendChild(buildStepPrayer(item, true)));
     }
 
     if (Array.isArray(aaPrayers) && aaPrayers.length > 0) {
