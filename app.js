@@ -14,7 +14,7 @@
 
   const BOOK_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" fill="currentColor"/></svg>';
 
-  const DIVIDER_ICON = '<span class="text-divider" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 1c0 4.2 1 8.3 3 10.2 1.4 1.3 4 1.7 8 1.8-4 .1-6.6.5-8 1.8-2 1.9-3 6-3 10.2 0-4.2-1-8.3-3-10.2-1.4-1.3-4-1.7-8-1.8 4-.1 6.6-.5 8-1.8 2-1.9 3-6 3-10.2z" fill="currentColor"/></svg></span>';
+  const DIVIDER_ICON = '<span class="text-divider" aria-hidden="true"><img src="images/divider-cross.png" alt="" class="text-divider-icon"></span>';
 
   function escapeHtml(str) {
     return str
@@ -47,7 +47,7 @@
       return `<button type="button" class="book-ref" data-ref-type="${refType}" data-ref="${escapeHtml(id)}" aria-label="Открыть в тексте книги">${BOOK_ICON}</button>`;
     });
     if (withDividers) {
-      out = out.replace(/\n{2,}/g, `\n${DIVIDER_ICON}\n`);
+      out = out.replace(/\n{2,}/g, DIVIDER_ICON);
     }
     return out;
   }
