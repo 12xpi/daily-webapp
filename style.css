@@ -500,26 +500,19 @@ body {
 }
 
 /* ============================================================
-   АУДИОЗАПИСИ — стили раздела
-   Добавить в конец style.css (перед @media (max-width: 400px),
-   либо просто в самый конец файла).
-
-   Всё построено на существующих переменных :root и на классах
-   .prayer-group / .prayer-group-body, поэтому раздел выглядит
-   как «Протоколы АА» без правок базовой вёрстки.
+   АУДИОЗАПИСИ — доработанный интерфейс
    ============================================================ */
 
-/* --- поле ввода пароля (показывается, если токена нет) --- */
 .audio-gate {
-  padding: 4px 0 20px;
+  padding: 20px 0 12px;
 }
 
 .audio-gate p {
   font-family: 'PT Sans', -apple-system, sans-serif;
   font-size: 14px;
   color: var(--ink-soft);
-  margin: 0 0 12px;
   line-height: 1.5;
+  margin: 0 0 16px;
 }
 
 .audio-gate-row {
@@ -527,59 +520,78 @@ body {
   gap: 8px;
 }
 
-.audio-gate input {
+.audio-gate-row input {
   flex: 1;
-  min-width: 0;
   font-family: 'PT Sans', -apple-system, sans-serif;
   font-size: 15px;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.5);
+  padding: 10px 12px;
   border: 1px solid var(--rule);
-  border-radius: 3px;
-  padding: 9px 11px;
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
 }
 
-.audio-gate input:focus {
+.audio-gate-row input:focus {
   outline: none;
   border-color: var(--mark);
 }
 
-.audio-gate button {
+.audio-gate-row button {
   font-family: 'PT Sans', -apple-system, sans-serif;
   font-size: 15px;
-  color: #FFFFFF;
-  background: var(--mark);
+  padding: 10px 20px;
   border: none;
-  border-radius: 3px;
-  padding: 9px 16px;
+  border-radius: 4px;
+  background: var(--mark);
+  color: #FFFFFF;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-.audio-gate button:disabled {
-  opacity: 0.55;
-  cursor: default;
+.audio-gate-row button:active {
+  opacity: 0.9;
+}
+
+.audio-gate-row button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .audio-gate-error {
   font-family: 'PT Sans', -apple-system, sans-serif;
   font-size: 13px;
-  color: #9C5A5A;
+  color: #8B4A4A;
   margin-top: 10px;
 }
 
-/* --- список записей --- */
+.audio-status {
+  font-family: 'PT Sans', -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--ink-soft);
+  text-align: center;
+  padding: 32px 0;
+  margin: 0;
+}
+
+.audio-list {
+  padding: 8px 0;
+}
 
 .audio-row {
-  padding: 16px 0 18px;
+  padding: 16px 0;
   border-top: 1px solid var(--rule);
 }
 
-.audio-title {
-  font-family: 'PT Serif', Georgia, serif;
-  font-size: 17px;
-  line-height: 1.4;
-  margin-bottom: 3px;
-  overflow-wrap: break-word;
+.audio-row:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Первая строка: дата · длительность + значок справа */
+.audio-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
 }
 
 .audio-meta {
@@ -587,78 +599,60 @@ body {
   font-size: 12px;
   color: var(--ink-soft);
   letter-spacing: 0.02em;
-  margin-bottom: 11px;
 }
 
-/* Нативный плеер, приведённый к палитре приложения */
-.audio-player {
-  width: 100%;
-  height: 40px;
-  display: block;
-}
-
-.audio-status {
+/* Значки статуса: new, @ 13, ✓ */
+.audio-badge {
   font-family: 'PT Sans', -apple-system, sans-serif;
-  font-size: 13px;
-  color: var(--ink-soft);
-}
-
-/* --- строка статуса и полоса прогресса --- */
-.audio-summary {
-  padding: 14px 0;
-  border-top: 1px solid var(--rule);
-  font-family: 'PT Sans', -apple-system, sans-serif;
-  font-size: 12px;
-  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.03em;
-}
-
-.audio-bar {
-  height: 2px;
-  background: var(--rule);
-  border-radius: 2px;
-  margin-top: 10px;
-  overflow: hidden;
-}
-
-.audio-bar-fill {
-  height: 100%;
-  width: 0;
-  background: var(--mark);
-  border-radius: 2px;
-  transition: width 0.25s linear;
-}
-
-.audio-status-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  margin-top: 8px;
-  min-height: 16px;
-  font-family: 'PT Sans', -apple-system, sans-serif;
-  font-size: 12px;
-  color: var(--ink-soft);
-}
-
-.audio-status-line .audio-done {
-  color: var(--mark);
-}
-
-.audio-reset {
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  font-family: 'PT Sans', -apple-system, sans-serif;
-  font-size: 12px;
-  color: var(--ink-soft);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 3px;
+  line-height: 1;
   flex-shrink: 0;
 }
 
-.audio-reset:active {
+.audio-badge-new {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.audio-badge-progress {
+  background: rgba(69, 86, 74, 0.12);
   color: var(--mark);
+}
+
+.audio-badge-done {
+  background: transparent;
+  color: var(--mark);
+  padding: 2px 4px;
+}
+
+.audio-badge-done svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+/* Название записи */
+.audio-title {
+  font-family: 'PT Serif', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+/* Плеер */
+.audio-player {
+  width: 100%;
+  height: 40px;
+  border-radius: 20px;
+  outline: none;
+}
+
+.audio-player:focus {
+  outline: 2px solid var(--mark);
+  outline-offset: 2px;
 }
