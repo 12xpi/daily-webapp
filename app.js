@@ -11,7 +11,7 @@
   let glossary = {};
 
   // --- Аудиозаписи: Cloudflare Worker -> Google Drive ---
-  const AUDIO_API = 'https://daily-audio.sgvyzsb5.workers.dev';
+  const AUDIO_API = 'https://daily-audio.ЗАМЕНИ-НА-СВОЙ-СУБДОМЕН.workers.dev';
   let audioToken = localStorage.getItem('audioToken') || '';
   let ethicsBlocks = null;
   let ethicsLoadingPromise = null;
