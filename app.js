@@ -9,6 +9,10 @@
   ];
 
   let glossary = {};
+
+  // --- Аудиозаписи: Cloudflare Worker -> Google Drive ---
+  const AUDIO_API = 'https://daily-audio.sgvyzsb5.workers.dev';
+  let audioToken = localStorage.getItem('audioToken') || '';
   let ethicsBlocks = null;
   let ethicsLoadingPromise = null;
 
@@ -381,6 +385,199 @@
     return group;
   }
 
+  function fmtSize(bytes) {
+    if (!bytes) return '';
+    const mb = bytes / 1048576;
+    return mb >= 1 ? mb.toFixed(1) + ' МБ' : Math.round(bytes / 1024) + ' КБ';
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+  }
+
+  async function fetchAudioList() {
+    const res = await fetch(AUDIO_API + '/list', {
+      headers: { Authorization: 'Bearer ' + audioToken },
+    });
+    if (res.status === 401) {
+      const err = new Error('unauthorized');
+      err.code = 401;
+      throw err;
+    }
+    if (!res.ok) throw new Error('http ' + res.status);
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.files || [];
+  }
+
+  // Рисует форму ввода пароля внутри группы
+  function renderAudioGate(container) {
+    container.innerHTML = '';
+
+    const gate = document.createElement('div');
+    gate.className = 'audio-gate';
+
+    const hint = document.createElement('p');
+    hint.textContent = 'Введите пароль для доступа к записям. Он сохранится только на этом устройстве.';
+    gate.appendChild(hint);
+
+    const row = document.createElement('div');
+    row.className = 'audio-gate-row';
+
+    const input = document.createElement('input');
+    input.type = 'password';
+    input.autocomplete = 'current-password';
+    input.placeholder = 'Пароль';
+    input.setAttribute('aria-label', 'Пароль для раздела Аудиозаписи');
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Войти';
+
+    row.append(input, btn);
+    gate.appendChild(row);
+
+    const error = document.createElement('div');
+    error.className = 'audio-gate-error';
+    error.hidden = true;
+    gate.appendChild(error);
+
+    container.appendChild(gate);
+
+    async function submit() {
+      const value = input.value.trim();
+      if (!value) return;
+      btn.disabled = true;
+      btn.textContent = 'Проверка…';
+      error.hidden = true;
+
+      audioToken = value;
+      try {
+        const files = await fetchAudioList();
+        localStorage.setItem('audioToken', value);
+        renderAudioList(container, files);
+      } catch (e) {
+        audioToken = '';
+        localStorage.removeItem('audioToken');
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+        error.textContent = e.code === 401
+          ? 'Неверный пароль.'
+          : 'Не удалось связаться с сервером. Попробуйте позже.';
+        error.hidden = false;
+      }
+    }
+
+    btn.addEventListener('click', submit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submit();
+    });
+  }
+
+  // Рисует список записей с плеерами
+  function renderAudioList(container, files) {
+    container.innerHTML = '';
+
+    if (!files.length) {
+      const empty = document.createElement('p');
+      empty.className = 'audio-status';
+      empty.textContent = 'Записей пока нет.';
+      container.appendChild(empty);
+      return;
+    }
+
+    const list = document.createElement('div');
+    list.className = 'audio-list';
+
+    files.forEach((f) => {
+      const row = document.createElement('div');
+      row.className = 'audio-row';
+
+      const title = document.createElement('div');
+      title.className = 'audio-title';
+      title.textContent = f.title || f.name;
+
+      const meta = document.createElement('div');
+      meta.className = 'audio-meta';
+      meta.textContent = [fmtDate(f.modifiedTime), fmtSize(f.size)]
+        .filter(Boolean)
+        .join(' · ');
+
+      const audio = document.createElement('audio');
+      audio.className = 'audio-player';
+      audio.controls = true;
+      // Обязательно: иначе браузер начнёт тянуть все 15 файлов при входе.
+      audio.preload = 'none';
+      // Токен в query — <audio> не умеет отправлять заголовки.
+      audio.src = `${AUDIO_API}/audio/${encodeURIComponent(f.id)}?t=${encodeURIComponent(audioToken)}`;
+
+      // Один плеер за раз: запуск нового останавливает предыдущий.
+      audio.addEventListener('play', () => {
+        list.querySelectorAll('audio').forEach((other) => {
+          if (other !== audio) other.pause();
+        });
+      });
+
+      row.append(title, meta, audio);
+      list.appendChild(row);
+    });
+
+    container.appendChild(list);
+  }
+
+  // Точка входа раздела — вызывается из renderStepPrayers()
+  function buildAudioGroup() {
+    const group = document.createElement('details');
+    group.className = 'prayer-group';
+
+    const summary = document.createElement('summary');
+    summary.textContent = 'Аудиозаписи';
+    group.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'prayer-group-body';
+    group.appendChild(body);
+
+    let loaded = false;
+
+    // Загружаем только при первом раскрытии — не тормозим загрузку дня.
+    group.addEventListener('toggle', async () => {
+      if (!group.open || loaded) return;
+      loaded = true;
+
+      if (!audioToken) {
+        renderAudioGate(body);
+        return;
+      }
+
+      const status = document.createElement('p');
+      status.className = 'audio-status';
+      status.textContent = 'Загрузка записей…';
+      body.appendChild(status);
+
+      try {
+        const files = await fetchAudioList();
+        renderAudioList(body, files);
+      } catch (e) {
+        body.innerHTML = '';
+        if (e.code === 401) {
+          // Токен устарел или отозван — просим ввести заново.
+          audioToken = '';
+          localStorage.removeItem('audioToken');
+          renderAudioGate(body);
+        } else {
+          const err = document.createElement('p');
+          err.className = 'audio-status';
+          err.textContent = 'Не удалось загрузить список записей.';
+          body.appendChild(err);
+        }
+      }
+    });
+
+    return group;
+  }
+
   function renderStepPrayers(aaPrayers, spinoza, aaProtocols) {
     const nav = document.getElementById('stepPrayers');
 
@@ -395,6 +592,8 @@
     if (Array.isArray(aaProtocols) && aaProtocols.length > 0) {
       nav.appendChild(buildPrayerGroup('Протоколы АА', aaProtocols));
     }
+
+    nav.appendChild(buildAudioGroup());
   }
 
   function showEmpty() {
