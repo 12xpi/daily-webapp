@@ -406,7 +406,7 @@
   const DONE_PREFIX = 'audioDone:';
   const RESUME_MIN = 10;    // короче 10 секунд не запоминаем — это случайный тап
   const SAVE_EVERY = 5;     // как часто сбрасывать позицию на диск, сек
-  const LISTENED_GAP = 25;  // столько секунд до конца считаем «дослушано»
+  const LISTENED_GAP = 60;  // столько секунд до конца считаем «дослушано»
 
   function loadPos(id) {
     try {
@@ -550,75 +550,64 @@
     });
   }
 
-  // Собирает одну строку: заголовок, метаданные, плеер, полоса прогресса, статус
-  function buildAudioRow(f, list, onChange) {
+  // Собирает одну строку: «дата · минуты» + бейдж статуса, название, плеер
+  function buildAudioRow(f, list) {
     const row = document.createElement('div');
     row.className = 'audio-row';
+
+    const meta = document.createElement('div');
+    meta.className = 'audio-meta';
+    const metaText = document.createElement('span');
+    const badge = document.createElement('span');
+    badge.className = 'audio-badge';
+    meta.append(metaText, badge);
 
     const title = document.createElement('div');
     title.className = 'audio-title';
     title.textContent = f.title || f.name;
 
-    const meta = document.createElement('div');
-    meta.className = 'audio-meta';
-    meta.textContent = [fmtDate(f.modifiedTime), fmtSize(f.size)].filter(Boolean).join(' · ');
-
     const audio = document.createElement('audio');
     audio.className = 'audio-player';
     audio.controls = true;
-    // Именно none: иначе браузер начнёт тянуть все 15 файлов при раскрытии.
+    // Именно none: иначе браузер начнёт тянуть все файлы при раскрытии.
     audio.preload = 'none';
     audio.src =
       AUDIO_API + '/audio/' + encodeURIComponent(f.id) +
       '?t=' + encodeURIComponent(audioToken);
 
-    const bar = document.createElement('div');
-    bar.className = 'audio-bar';
-    const fill = document.createElement('div');
-    fill.className = 'audio-bar-fill';
-    bar.appendChild(fill);
-
-    const status = document.createElement('div');
-    status.className = 'audio-status-line';
-    const statusText = document.createElement('span');
-    const resetBtn = document.createElement('button');
-    resetBtn.type = 'button';
-    resetBtn.className = 'audio-reset';
-    resetBtn.textContent = 'начать сначала';
-    resetBtn.hidden = true;
-    status.append(statusText, resetBtn);
-
-    row.append(title, meta, audio, bar, status);
+    row.append(meta, title, audio);
 
     let saved = loadPos(f.id);   // с какой секунды продолжать
     let lastSaved = saved;       // что уже лежит в localStorage
     let applied = false;         // перемотались ли на сохранённую позицию
 
-    function paint(cur, dur) {
-      const frac = dur && cur ? Math.min(1, cur / dur) : 0;
-      fill.style.width = (frac * 100).toFixed(1) + '%';
+    // «42 мин»: длительность из воркера (KV), иначе — из самого плеера
+    function paintMeta() {
+      const dur = f.duration || (Number.isFinite(audio.duration) ? audio.duration : 0);
+      const mins = dur ? Math.max(1, Math.round(dur / 60)) + ' мин' : '';
+      metaText.textContent = [fmtDate(f.modifiedTime), mins].filter(Boolean).join(' · ');
     }
 
-    function paintIdle() {
+    // new / @ 13 / ✓
+    function paintBadge() {
+      badge.className = 'audio-badge';
       if (isDone(f.id)) {
-        statusText.textContent = 'Прослушано';
-        statusText.classList.add('audio-done');
-        fill.style.width = '100%';
-        resetBtn.hidden = false;
+        badge.textContent = '✓';
+        badge.classList.add('audio-badge--done');
       } else if (saved > RESUME_MIN) {
-        statusText.textContent = 'Продолжить с ' + fmtClock(saved);
-        statusText.classList.remove('audio-done');
-        paint(saved, audio.duration);
-        resetBtn.hidden = false;
+        // целые прошедшие минуты; до первой минуты — «@ 0:30»
+        badge.textContent = saved >= 60
+          ? '@ ' + Math.floor(saved / 60)
+          : '@ 0:' + String(Math.floor(saved)).padStart(2, '0');
+        badge.classList.add('audio-badge--pos');
       } else {
-        statusText.textContent = '';
-        statusText.classList.remove('audio-done');
-        fill.style.width = '0%';
-        resetBtn.hidden = true;
+        badge.textContent = 'new';
+        badge.classList.add('audio-badge--new');
       }
     }
 
-    paintIdle();
+    paintMeta();
+    paintBadge();
 
     // Перематываем один раз, когда браузер узнал длительность.
     // Страховка на canplay нужна для iOS: там loadedmetadata иногда
@@ -633,56 +622,61 @@
           audio.currentTime = saved;
         } catch (e) {}
       }
-      paintIdle();
+      paintMeta();
+      paintBadge();
     }
 
     audio.addEventListener('loadedmetadata', seekToSaved);
     audio.addEventListener('canplay', seekToSaved);
 
-    audio.addEventListener('timeupdate', () => {
+    // Запоминает текущее место (или отмечает «дослушано»)
+    function remember(force) {
       const cur = audio.currentTime;
       const dur = audio.duration;
-      paint(cur, dur);
+      if (!dur || !Number.isFinite(dur)) return;
+      // Пока метаданные не применены, currentTime ещё 0 — не затираем позицию.
+      if (!applied) return;
 
-      // Последние секунды не сохраняем — их обработает 'ended'.
-      if (dur && dur - cur <= LISTENED_GAP) return;
+      // Осталась минута или меньше — считаем дослушанным.
+      if (dur - cur <= LISTENED_GAP) {
+        if (!isDone(f.id)) {
+          clearPos(f.id);
+          setDone(f.id, true);
+          saved = 0;
+          lastSaved = 0;
+          paintBadge();
+        }
+        return;
+      }
 
       // Пишем на диск раз в SAVE_EVERY секунд, а не на каждый timeupdate
-      // (он вызывается ~4 раза в секунду и забил бы localStorage).
-      if (Math.abs(cur - lastSaved) < SAVE_EVERY) return;
+      // (он вызывается ~4 раза в секунду). На паузе пишем сразу.
+      if (!force && Math.abs(cur - lastSaved) < SAVE_EVERY) return;
       lastSaved = cur;
 
       if (cur > RESUME_MIN) {
         saved = cur;
         savePos(f.id, cur);
+        setDone(f.id, false);   // переслушивают с середины — снова «в процессе»
       } else {
         saved = 0;
         clearPos(f.id);
       }
+      paintBadge();
+    }
+
+    audio.addEventListener('timeupdate', () => remember(false));
+    audio.addEventListener('pause', () => {
+      if (!audio.ended) remember(true);
     });
 
     audio.addEventListener('ended', () => {
       clearPos(f.id);
       setDone(f.id, true);
       saved = 0;
-      applied = true;
-      fill.style.width = '100%';
-      paintIdle();
-      if (onChange) onChange();
-    });
-
-    resetBtn.addEventListener('click', () => {
-      clearPos(f.id);
-      setDone(f.id, false);
-      saved = 0;
       lastSaved = 0;
       applied = true;
-      try {
-        audio.currentTime = 0;
-      } catch (e) {}
-      paint(0, audio.duration);
-      paintIdle();
-      if (onChange) onChange();
+      paintBadge();
     });
 
     // Один плеер за раз: запуск нового останавливает предыдущий.
@@ -710,20 +704,8 @@
     const list = document.createElement('div');
     list.className = 'audio-list';
 
-    const summary = document.createElement('div');
-    summary.className = 'audio-summary';
-    list.appendChild(summary);
-
-    function refreshSummary() {
-      const done = files.filter((f) => isDone(f.id)).length;
-      summary.textContent = done
-        ? 'Прослушано: ' + done + ' из ' + files.length
-        : 'Записей: ' + files.length;
-    }
-    refreshSummary();
-
     files.forEach((f) => {
-      list.appendChild(buildAudioRow(f, list, refreshSummary));
+      list.appendChild(buildAudioRow(f, list));
     });
 
     container.appendChild(list);
