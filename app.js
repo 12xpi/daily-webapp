@@ -275,29 +275,74 @@
   }
 
   function dayOfYear(date) {
-    const start = new Date(date.getFullYear(), 0, 0);
+    const start = new Date(date.getFullYear(), 0, 1);
     const diff = date - start;
-    const oneDay = 1000 * 60 * 60 * 24;
-    return Math.floor(diff / oneDay);
+    return Math.floor(diff / 86400000) + 1;
   }
 
-  function renderDayHeader(d) {
-    const hero = document.getElementById('hero');
-    const dayEl = hero.querySelector('.hero-date-day');
-    const monthEl = hero.querySelector('.hero-date-month');
-    const weekdayEl = hero.querySelector('.hero-date-weekday');
-
-    dayEl.textContent = d.getDate();
-    monthEl.textContent = MONTHS_GENITIVE[d.getMonth()];
-    weekdayEl.textContent = WEEKDAYS[d.getDay()];
-
-    const doy = dayOfYear(d);
-    const imageIndex = ((doy - 1) % 19) + 1;
-    const img = hero.querySelector('.hero-image');
-    img.src = `images/hero/${imageIndex}.jpg`;
+  function formatDate(date) {
+    const day = date.getDate();
+    const month = MONTHS_GENITIVE[date.getMonth()];
+    const weekday = WEEKDAYS[date.getDay()];
+    return { day, month, weekday };
   }
 
-  function buildStepPrayer(item, isSpinoza) {
+  async function loadJSON(path) {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(`Failed to load ${path}`);
+    return res.json();
+  }
+
+  async function init() {
+    const today = new Date();
+    const key = `${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+
+    const { day, month, weekday } = formatDate(today);
+    document.getElementById('dateWeekday').textContent = weekday;
+    document.getElementById('dateDay').textContent = day;
+    document.getElementById('dateMonth').textContent = month;
+
+    let reflections, prayers, aaPrayers, spinoza, aaProtocols;
+    try {
+      [reflections, prayers, aaPrayers, spinoza, aaProtocols] = await Promise.all([
+        loadJSON('data/reflections.json'),
+        loadJSON('data/prayers.json'),
+        loadJSON('data/aa_prayers.json'),
+        loadJSON('data/spinoza.json'),
+        loadJSON('data/aa_protocols.json')
+      ]);
+    } catch (e) {
+      showEmpty();
+      return;
+    }
+
+    try {
+      glossary = await loadJSON('data/glossary.json');
+    } catch (e) {
+      glossary = {};
+    }
+
+    renderStepPrayers(aaPrayers, spinoza, aaProtocols);
+
+    const reflection = reflections[key];
+    const pairIndex = dayOfYear(today) % prayers.length;
+    const pair = prayers[pairIndex];
+
+    if (!reflection || !pair) {
+      showEmpty();
+      return;
+    }
+
+    setFormatted(document.querySelector('#prayer1 .prayer-text'), pair.classic);
+    setFormatted(document.querySelector('#prayer2 .prayer-text'), pair.personal);
+
+    document.querySelector('.reflection-title').textContent = reflection.title;
+    setFormatted(document.querySelector('.reflection-desc'), reflection.description);
+    setFormatted(document.querySelector('.reflection-content'), reflection.content);
+    document.querySelector('.reflection-source').textContent = reflection.sources;
+  }
+
+  function buildStepPrayer(item, withDividers) {
     const details = document.createElement('details');
     details.className = 'step-prayer';
 
@@ -310,7 +355,7 @@
 
     const text = document.createElement('p');
     text.className = 'step-prayer-text';
-    setFormatted(text, item.text, isSpinoza);
+    setFormatted(text, item.text, withDividers);
     body.appendChild(text);
 
     if (item.source) {
@@ -324,37 +369,32 @@
     return details;
   }
 
-  function buildPrayerGroup(groupTitle, items) {
+  function buildPrayerGroup(title, items) {
     const group = document.createElement('details');
     group.className = 'prayer-group';
 
-    const summary = document.createElement('summary');
-    summary.textContent = groupTitle;
-    group.appendChild(summary);
+    const groupSummary = document.createElement('summary');
+    groupSummary.textContent = title;
+    group.appendChild(groupSummary);
 
-    const body = document.createElement('div');
-    body.className = 'prayer-group-body';
-    items.forEach(item => body.appendChild(buildStepPrayer(item, false)));
-    group.appendChild(body);
+    const groupBody = document.createElement('div');
+    groupBody.className = 'prayer-group-body';
+    items.forEach(item => groupBody.appendChild(buildStepPrayer(item)));
+    group.appendChild(groupBody);
 
     return group;
   }
 
-  // ============================================================
-  // АУДИОЗАПИСИ — доработанный интерфейс
-  // ============================================================
+  function fmtSize(bytes) {
+    if (!bytes) return '';
+    const mb = bytes / 1048576;
+    return mb >= 1 ? mb.toFixed(1) + ' МБ' : Math.round(bytes / 1024) + ' КБ';
+  }
 
   function fmtDate(iso) {
     if (!iso) return '';
     const d = new Date(iso);
     return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
-  }
-
-  // Форматирует длительность (секунды → минуты) для метаданных
-  function fmtDuration(sec) {
-    if (!sec || !Number.isFinite(sec)) return '';
-    const min = Math.round(sec / 60);
-    return min + ' мин';
   }
 
   /* ---- память позиции воспроизведения ----
@@ -366,7 +406,7 @@
   const DONE_PREFIX = 'audioDone:';
   const RESUME_MIN = 10;    // короче 10 секунд не запоминаем — это случайный тап
   const SAVE_EVERY = 5;     // как часто сбрасывать позицию на диск, сек
-  const LISTENED_GAP = 60;  // столько секунд до конца считаем «дослушано» (было 25, сделал 60)
+  const LISTENED_GAP = 25;  // столько секунд до конца считаем «дослушано»
 
   function loadPos(id) {
     try {
@@ -404,6 +444,16 @@
     } catch (e) {}
   }
 
+  // 3725 -> "1:02:05", 725 -> "12:05"
+  function fmtClock(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    const mm = h ? String(m).padStart(2, '0') : String(m);
+    return (h ? h + ':' + mm : mm) + ':' + String(s).padStart(2, '0');
+  }
+
   async function fetchAudioList() {
     let res;
     try {
@@ -411,6 +461,8 @@
         headers: { Authorization: 'Bearer ' + audioToken },
       });
     } catch (e) {
+      // fetch падает до всякого ответа: адрес воркера неверен, нет DNS,
+      // нет интернета или запрос зарезал CORS.
       const err = new Error('network');
       err.code = 'network';
       throw err;
@@ -425,6 +477,7 @@
     return Array.isArray(data) ? data : data.files || [];
   }
 
+  // Внятный текст вместо «попробуйте позже»
   function audioErrorText(e) {
     if (e && e.code === 'network') {
       return 'Воркер недоступен. Проверьте адрес в AUDIO_API (app.js) и что воркер задеплоен.';
@@ -433,6 +486,7 @@
            '. Проверьте секреты DRIVE_API_KEY и DRIVE_FOLDER_ID в Cloudflare.';
   }
 
+  // Рисует форму ввода пароля внутри группы
   function renderAudioGate(container) {
     container.innerHTML = '';
 
@@ -496,63 +550,79 @@
     });
   }
 
-  // Собирает одну строку: дата и длительность сверху, название снизу, плеер, статус
+  // Собирает одну строку: заголовок, метаданные, плеер, полоса прогресса, статус
   function buildAudioRow(f, list, onChange) {
     const row = document.createElement('div');
     row.className = 'audio-row';
 
-    // Первая строка: дата · длительность + значок статуса
-    const metaRow = document.createElement('div');
-    metaRow.className = 'audio-meta-row';
-
-    const metaText = document.createElement('div');
-    metaText.className = 'audio-meta';
-    const parts = [fmtDate(f.modifiedTime), fmtDuration(f.duration)].filter(Boolean);
-    metaText.textContent = parts.join(' · ');
-    metaRow.appendChild(metaText);
-
-    const badge = document.createElement('div');
-    badge.className = 'audio-badge';
-    metaRow.appendChild(badge);
-
-    row.appendChild(metaRow);
-
-    // Вторая строка: название записи
     const title = document.createElement('div');
     title.className = 'audio-title';
     title.textContent = f.title || f.name;
-    row.appendChild(title);
 
-    // Плеер
+    const meta = document.createElement('div');
+    meta.className = 'audio-meta';
+    meta.textContent = [fmtDate(f.modifiedTime), fmtSize(f.size)].filter(Boolean).join(' · ');
+
     const audio = document.createElement('audio');
     audio.className = 'audio-player';
     audio.controls = true;
+    // Именно none: иначе браузер начнёт тянуть все 15 файлов при раскрытии.
     audio.preload = 'none';
     audio.src =
       AUDIO_API + '/audio/' + encodeURIComponent(f.id) +
       '?t=' + encodeURIComponent(audioToken);
-    row.appendChild(audio);
 
-    let saved = loadPos(f.id);
-    let lastSaved = saved;
-    let applied = false;
+    const bar = document.createElement('div');
+    bar.className = 'audio-bar';
+    const fill = document.createElement('div');
+    fill.className = 'audio-bar-fill';
+    bar.appendChild(fill);
 
-    function updateBadge() {
+    const status = document.createElement('div');
+    status.className = 'audio-status-line';
+    const statusText = document.createElement('span');
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'audio-reset';
+    resetBtn.textContent = 'начать сначала';
+    resetBtn.hidden = true;
+    status.append(statusText, resetBtn);
+
+    row.append(title, meta, audio, bar, status);
+
+    let saved = loadPos(f.id);   // с какой секунды продолжать
+    let lastSaved = saved;       // что уже лежит в localStorage
+    let applied = false;         // перемотались ли на сохранённую позицию
+
+    function paint(cur, dur) {
+      const frac = dur && cur ? Math.min(1, cur / dur) : 0;
+      fill.style.width = (frac * 100).toFixed(1) + '%';
+    }
+
+    function paintIdle() {
       if (isDone(f.id)) {
-        badge.className = 'audio-badge audio-badge-done';
-        badge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        statusText.textContent = 'Прослушано';
+        statusText.classList.add('audio-done');
+        fill.style.width = '100%';
+        resetBtn.hidden = false;
       } else if (saved > RESUME_MIN) {
-        const min = Math.round(saved / 60);
-        badge.className = 'audio-badge audio-badge-progress';
-        badge.textContent = '@ ' + min;
+        statusText.textContent = 'Продолжить с ' + fmtClock(saved);
+        statusText.classList.remove('audio-done');
+        paint(saved, audio.duration);
+        resetBtn.hidden = false;
       } else {
-        badge.className = 'audio-badge audio-badge-new';
-        badge.textContent = 'new';
+        statusText.textContent = '';
+        statusText.classList.remove('audio-done');
+        fill.style.width = '0%';
+        resetBtn.hidden = true;
       }
     }
 
-    updateBadge();
+    paintIdle();
 
+    // Перематываем один раз, когда браузер узнал длительность.
+    // Страховка на canplay нужна для iOS: там loadedmetadata иногда
+    // приходит до того, как перемотка вообще возможна.
     function seekToSaved() {
       if (applied) return;
       const dur = audio.duration;
@@ -563,7 +633,7 @@
           audio.currentTime = saved;
         } catch (e) {}
       }
-      updateBadge();
+      paintIdle();
     }
 
     audio.addEventListener('loadedmetadata', seekToSaved);
@@ -572,16 +642,19 @@
     audio.addEventListener('timeupdate', () => {
       const cur = audio.currentTime;
       const dur = audio.duration;
+      paint(cur, dur);
 
+      // Последние секунды не сохраняем — их обработает 'ended'.
       if (dur && dur - cur <= LISTENED_GAP) return;
 
+      // Пишем на диск раз в SAVE_EVERY секунд, а не на каждый timeupdate
+      // (он вызывается ~4 раза в секунду и забил бы localStorage).
       if (Math.abs(cur - lastSaved) < SAVE_EVERY) return;
       lastSaved = cur;
 
       if (cur > RESUME_MIN) {
         saved = cur;
         savePos(f.id, cur);
-        updateBadge();
       } else {
         saved = 0;
         clearPos(f.id);
@@ -593,10 +666,26 @@
       setDone(f.id, true);
       saved = 0;
       applied = true;
-      updateBadge();
+      fill.style.width = '100%';
+      paintIdle();
       if (onChange) onChange();
     });
 
+    resetBtn.addEventListener('click', () => {
+      clearPos(f.id);
+      setDone(f.id, false);
+      saved = 0;
+      lastSaved = 0;
+      applied = true;
+      try {
+        audio.currentTime = 0;
+      } catch (e) {}
+      paint(0, audio.duration);
+      paintIdle();
+      if (onChange) onChange();
+    });
+
+    // Один плеер за раз: запуск нового останавливает предыдущий.
     audio.addEventListener('play', () => {
       list.querySelectorAll('audio').forEach((other) => {
         if (other !== audio) other.pause();
@@ -606,6 +695,7 @@
     return row;
   }
 
+  // Рисует список записей с плеерами
   function renderAudioList(container, files) {
     container.innerHTML = '';
 
@@ -620,13 +710,27 @@
     const list = document.createElement('div');
     list.className = 'audio-list';
 
+    const summary = document.createElement('div');
+    summary.className = 'audio-summary';
+    list.appendChild(summary);
+
+    function refreshSummary() {
+      const done = files.filter((f) => isDone(f.id)).length;
+      summary.textContent = done
+        ? 'Прослушано: ' + done + ' из ' + files.length
+        : 'Записей: ' + files.length;
+    }
+    refreshSummary();
+
     files.forEach((f) => {
-      list.appendChild(buildAudioRow(f, list, null));
+      list.appendChild(buildAudioRow(f, list, refreshSummary));
     });
 
     container.appendChild(list);
   }
 
+
+  // Точка входа раздела — вызывается из renderStepPrayers()
   function buildAudioGroup() {
     const group = document.createElement('details');
     group.className = 'prayer-group';
@@ -641,6 +745,7 @@
 
     let loaded = false;
 
+    // Загружаем только при первом раскрытии — не тормозим загрузку дня.
     group.addEventListener('toggle', async () => {
       if (!group.open || loaded) return;
       loaded = true;
@@ -661,13 +766,14 @@
       } catch (e) {
         body.innerHTML = '';
         if (e.code === 401) {
+          // Токен устарел или отозван — просим ввести заново.
           audioToken = '';
           localStorage.removeItem('audioToken');
           renderAudioGate(body);
         } else {
           const err = document.createElement('p');
           err.className = 'audio-status';
-          err.textContent = audioErrorText(e);
+          err.textContent = 'Не удалось загрузить список записей.';
           body.appendChild(err);
         }
       }
@@ -700,61 +806,6 @@
     document.getElementById('prayer2').hidden = true;
     document.getElementById('reflection').hidden = true;
     document.querySelectorAll('.rule').forEach(r => r.hidden = true);
-  }
-
-  async function loadJSON(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
-  }
-
-  async function init() {
-    try {
-      const data = await loadJSON('data/data.json');
-      glossary = data.glossary || {};
-
-      renderDayHeader(new Date());
-
-      const p1 = document.getElementById('prayer1Text');
-      setFormatted(p1, data.prayer1, true);
-
-      if (data.prayer2) {
-        setFormatted(document.getElementById('prayer2Text'), data.prayer2, true);
-      } else {
-        document.getElementById('prayer2').hidden = true;
-        document.querySelector('.rule--wide').hidden = true;
-      }
-
-      const refl = document.getElementById('reflection');
-      if (data.reflection) {
-        if (data.reflection.title) {
-          document.getElementById('reflectionTitle').textContent = data.reflection.title;
-        }
-        if (data.reflection.desc) {
-          document.getElementById('reflectionDesc').textContent = data.reflection.desc;
-        } else {
-          document.getElementById('reflectionDesc').hidden = true;
-        }
-        setFormatted(document.getElementById('reflectionContent'), data.reflection.text);
-        if (data.reflection.source) {
-          document.getElementById('reflectionSource').textContent = data.reflection.source;
-        } else {
-          document.getElementById('reflectionSource').hidden = true;
-        }
-      } else {
-        refl.hidden = true;
-        document.querySelectorAll('.rule').forEach(r => r.hidden = true);
-      }
-
-      if (data.spinoza || data.aaPrayers || data.aaProtocols) {
-        renderStepPrayers(data.aaPrayers, data.spinoza, data.aaProtocols);
-      } else {
-        document.getElementById('stepPrayers').hidden = true;
-      }
-
-    } catch (e) {
-      showEmpty();
-    }
   }
 
   init();
