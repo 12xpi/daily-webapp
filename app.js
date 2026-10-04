@@ -342,12 +342,32 @@
     document.querySelector('.reflection-source').textContent = reflection.sources;
   }
 
-  function buildStepPrayer(item, withDividers) {
+  // Заголовок раздела: текст, а если задана иконка — «иконка + текст»
+  function setSummary(summary, title, icon) {
+    if (!icon) {
+      summary.textContent = title;
+      return;
+    }
+    const label = document.createElement('span');
+    label.className = 'sum-label';
+    const img = document.createElement('img');
+    img.className = 'sum-icon';
+    img.src = 'images/' + icon;
+    img.alt = '';
+    img.width = 16;
+    img.height = 16;
+    const text = document.createElement('span');
+    text.textContent = title;
+    label.append(img, text);
+    summary.appendChild(label);
+  }
+
+  function buildStepPrayer(item, withDividers, icon) {
     const details = document.createElement('details');
     details.className = 'step-prayer';
 
     const summary = document.createElement('summary');
-    summary.textContent = item.title;
+    setSummary(summary, item.title, icon);
     details.appendChild(summary);
 
     const body = document.createElement('div');
@@ -369,12 +389,12 @@
     return details;
   }
 
-  function buildPrayerGroup(title, items) {
+  function buildPrayerGroup(title, items, icon) {
     const group = document.createElement('details');
     group.className = 'prayer-group';
 
     const groupSummary = document.createElement('summary');
-    groupSummary.textContent = title;
+    setSummary(groupSummary, title, icon);
     group.appendChild(groupSummary);
 
     const groupBody = document.createElement('div');
@@ -486,6 +506,53 @@
            '. Проверьте секреты DRIVE_API_KEY и DRIVE_FOLDER_ID в Cloudflare.';
   }
 
+  /* ---- длительность записей ----
+     Drive не знает длительность .m4a, поэтому воркер возвращает duration: null.
+     Фронтенд сам читает метаданные файла (скрытый <audio>), показывает минуты
+     и сообщает воркеру — тот кладёт значение в KV. В следующий раз /list
+     вернёт duration сразу, и дозагрузка уже не понадобится. */
+  function probeDuration(id) {
+    return new Promise((resolve) => {
+      const a = new Audio();
+      a.preload = 'metadata';
+      let finished = false;
+      const finish = (sec) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        a.removeAttribute('src');
+        try { a.load(); } catch (e) {}
+        resolve(sec);
+      };
+      const timer = setTimeout(() => finish(0), 15000);
+      a.addEventListener('loadedmetadata', () => {
+        finish(Number.isFinite(a.duration) && a.duration > 0 ? Math.round(a.duration) : 0);
+      });
+      a.addEventListener('error', () => finish(0));
+      a.src = AUDIO_API + '/audio/' + encodeURIComponent(id) +
+              '?t=' + encodeURIComponent(audioToken);
+    });
+  }
+
+  // Без заголовков и тела — «простой» запрос, preflight не нужен
+  function postDuration(id, sec) {
+    fetch(AUDIO_API + '/duration/' + encodeURIComponent(id) +
+          '?sec=' + sec + '&t=' + encodeURIComponent(audioToken),
+          { method: 'POST' }).catch(() => {});
+  }
+
+  // По одному файлу за раз, чтобы не качать метаданные всех файлов сразу
+  async function fillDurations(files, rows) {
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].duration) continue;
+      if (!rows[i].isConnected) return;   // раздел перерисовали — прекращаем
+      const sec = await probeDuration(files[i].id);
+      if (!sec) continue;
+      rows[i].setDuration(sec);
+      postDuration(files[i].id, sec);
+    }
+  }
+
   // Рисует форму ввода пароля внутри группы
   function renderAudioGate(container) {
     container.innerHTML = '';
@@ -580,6 +647,14 @@
     let saved = loadPos(f.id);   // с какой секунды продолжать
     let lastSaved = saved;       // что уже лежит в localStorage
     let applied = false;         // перемотались ли на сохранённую позицию
+    let playing = false;         // идёт ли воспроизведение сейчас
+
+    // Иконка «играет» — показывается в углу вместо бейджа
+    const waveImg = document.createElement('img');
+    waveImg.src = 'images/icon_aWave_44.png';
+    waveImg.alt = 'играет';
+    waveImg.width = 22;
+    waveImg.height = 22;
 
     // «42 мин»: длительность из воркера (KV), иначе — из самого плеера
     function paintMeta() {
@@ -590,6 +665,14 @@
 
     // new / @ 13 / ✓
     function paintBadge() {
+      if (playing) {
+        badge.className = 'audio-badge audio-badge--playing';
+        if (badge.firstChild !== waveImg) {
+          badge.textContent = '';
+          badge.appendChild(waveImg);
+        }
+        return;
+      }
       badge.className = 'audio-badge';
       if (isDone(f.id)) {
         badge.textContent = '✓';
@@ -606,6 +689,11 @@
       }
     }
 
+    row.setDuration = (sec) => {
+      f.duration = sec;
+      paintMeta();
+    };
+
     paintMeta();
     paintBadge();
 
@@ -621,6 +709,11 @@
         try {
           audio.currentTime = saved;
         } catch (e) {}
+      }
+      // Страховка: если фоновая дозагрузка не сработала (iOS), запоминаем при запуске
+      if (!f.duration) {
+        f.duration = Math.round(dur);
+        postDuration(f.id, f.duration);
       }
       paintMeta();
       paintBadge();
@@ -667,10 +760,13 @@
 
     audio.addEventListener('timeupdate', () => remember(false));
     audio.addEventListener('pause', () => {
+      playing = false;
       if (!audio.ended) remember(true);
+      paintBadge();
     });
 
     audio.addEventListener('ended', () => {
+      playing = false;
       clearPos(f.id);
       setDone(f.id, true);
       saved = 0;
@@ -681,6 +777,8 @@
 
     // Один плеер за раз: запуск нового останавливает предыдущий.
     audio.addEventListener('play', () => {
+      playing = true;
+      paintBadge();
       list.querySelectorAll('audio').forEach((other) => {
         if (other !== audio) other.pause();
       });
@@ -704,11 +802,14 @@
     const list = document.createElement('div');
     list.className = 'audio-list';
 
-    files.forEach((f) => {
-      list.appendChild(buildAudioRow(f, list));
+    const rows = files.map((f) => {
+      const r = buildAudioRow(f, list);
+      list.appendChild(r);
+      return r;
     });
 
     container.appendChild(list);
+    fillDurations(files, rows);
   }
 
 
@@ -718,7 +819,7 @@
     group.className = 'prayer-group';
 
     const summary = document.createElement('summary');
-    summary.textContent = 'Аудиозаписи';
+    setSummary(summary, 'Аудиозаписи', 'icon_audio_32.png');
     group.appendChild(summary);
 
     const body = document.createElement('div');
@@ -768,15 +869,15 @@
     const nav = document.getElementById('stepPrayers');
 
     if (Array.isArray(spinoza)) {
-      spinoza.forEach(item => nav.appendChild(buildStepPrayer(item, true)));
+      spinoza.forEach(item => nav.appendChild(buildStepPrayer(item, true, 'icon_feather_32.png')));
     }
 
     if (Array.isArray(aaPrayers) && aaPrayers.length > 0) {
-      nav.appendChild(buildPrayerGroup('Молитвы АА', aaPrayers));
+      nav.appendChild(buildPrayerGroup('Молитвы АА', aaPrayers, 'icon_pray_32.png'));
     }
 
     if (Array.isArray(aaProtocols) && aaProtocols.length > 0) {
-      nav.appendChild(buildPrayerGroup('Протоколы АА', aaProtocols));
+      nav.appendChild(buildPrayerGroup('Протоколы АА', aaProtocols, 'icon_list_32.png'));
     }
 
     nav.appendChild(buildAudioGroup());
