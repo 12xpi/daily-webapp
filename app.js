@@ -617,6 +617,248 @@
     });
   }
 
+  /* ---- Заметки ----
+     Общий блокнот (плавающая кнопка) и заметки к записям («+» после названия).
+     Хранятся в Cloudflare KV через воркер (GET/PUT /notes), доступ — тем же паролем,
+     что и к аудио. Весь набор заметок грузится один раз за сессию и кэшируется. */
+  let notes = null;        // { general: '', audio: { [id]: text } }
+  let notesPromise = null;
+  let noteOverlay = null;
+
+  async function notesRequest(method, body) {
+    let res;
+    try {
+      res = await fetch(AUDIO_API + '/notes', {
+        method,
+        headers: Object.assign(
+          { Authorization: 'Bearer ' + audioToken },
+          body ? { 'Content-Type': 'application/json' } : {}
+        ),
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (e) {
+      const err = new Error('network');
+      err.code = 'network';
+      throw err;
+    }
+    if (!res.ok) {
+      const err = new Error('http ' + res.status);
+      err.code = res.status;
+      throw err;
+    }
+    return res.json();
+  }
+
+  function loadNotes(force) {
+    if (notes && !force) return Promise.resolve(notes);
+    if (!notesPromise) {
+      notesPromise = notesRequest('GET')
+        .then((d) => {
+          notes = { general: d.general || '', audio: d.audio || {} };
+          return notes;
+        })
+        .finally(() => { notesPromise = null; });
+    }
+    return notesPromise;
+  }
+
+  async function saveNote(scope, id, text) {
+    await notesRequest('PUT', { scope, id, text });
+    if (scope === 'general') notes.general = text;
+    else if (text.trim()) notes.audio[id] = text;
+    else delete notes.audio[id];
+  }
+
+  function closeNoteEditor() {
+    if (noteOverlay) {
+      noteOverlay.remove();
+      noteOverlay = null;
+    }
+  }
+
+  // opts: { title, scope: 'general' | 'audio', id, onSaved }
+  function openNoteEditor(opts) {
+    closeNoteEditor();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'note-overlay';
+
+    const card = document.createElement('div');
+    card.className = 'note-card';
+
+    const head = document.createElement('div');
+    head.className = 'note-head';
+    const headTitle = document.createElement('span');
+    headTitle.className = 'note-head-title';
+    headTitle.textContent = opts.title;
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'book-close';
+    close.setAttribute('aria-label', 'Закрыть');
+    close.textContent = '✕';
+    close.addEventListener('click', closeNoteEditor);
+    head.append(headTitle, close);
+
+    const body = document.createElement('div');
+    card.append(head, body);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    noteOverlay = overlay;
+
+    function resetToken() {
+      audioToken = '';
+      localStorage.removeItem('audioToken');
+    }
+
+    function showMessage(text) {
+      body.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'audio-status';
+      p.textContent = text;
+      body.appendChild(p);
+    }
+
+    function currentText() {
+      return opts.scope === 'general' ? notes.general : (notes.audio[opts.id] || '');
+    }
+
+    function showEditor() {
+      body.innerHTML = '';
+
+      const ta = document.createElement('textarea');
+      ta.className = 'note-input';
+      ta.placeholder = 'Текст заметки…';
+      ta.value = currentText();
+
+      const foot = document.createElement('div');
+      foot.className = 'note-foot';
+      const status = document.createElement('span');
+      status.className = 'note-status';
+      const save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'note-save';
+      save.textContent = 'Сохранить';
+      foot.append(status, save);
+
+      body.append(ta, foot);
+
+      save.addEventListener('click', async () => {
+        save.disabled = true;
+        save.textContent = 'Сохранение…';
+        status.textContent = '';
+        const text = ta.value;
+        try {
+          await saveNote(opts.scope, opts.id, text);
+          if (opts.onSaved) opts.onSaved(text);
+          closeNoteEditor();
+        } catch (e) {
+          if (e.code === 401) {
+            resetToken();
+            showGate();
+            return;
+          }
+          status.textContent = 'Не удалось сохранить. Попробуйте ещё раз.';
+          save.disabled = false;
+          save.textContent = 'Сохранить';
+        }
+      });
+
+      ta.focus();
+    }
+
+    // Пароля нет (или устарел) — просим ввести, как в разделе аудио
+    function showGate() {
+      body.innerHTML = '';
+
+      const hint = document.createElement('p');
+      hint.className = 'audio-status';
+      hint.textContent = 'Введите пароль. Он сохранится только на этом устройстве.';
+
+      const row = document.createElement('div');
+      row.className = 'audio-gate audio-gate-row';
+      const input = document.createElement('input');
+      input.type = 'password';
+      input.autocomplete = 'current-password';
+      input.placeholder = 'Пароль';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = 'Войти';
+      row.append(input, btn);
+
+      const error = document.createElement('div');
+      error.className = 'audio-gate-error';
+      error.hidden = true;
+
+      body.append(hint, row, error);
+
+      async function submit() {
+        const value = input.value.trim();
+        if (!value) return;
+        btn.disabled = true;
+        error.hidden = true;
+        audioToken = value;
+        try {
+          await loadNotes(true);
+          localStorage.setItem('audioToken', value);
+          showEditor();
+        } catch (e) {
+          resetToken();
+          btn.disabled = false;
+          error.textContent = e.code === 401
+            ? 'Неверный пароль.'
+            : 'Не удалось связаться с сервером заметок.';
+          error.hidden = false;
+        }
+      }
+
+      btn.addEventListener('click', submit);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submit();
+      });
+      input.focus();
+    }
+
+    (async () => {
+      if (!audioToken) {
+        showGate();
+        return;
+      }
+      showMessage('Загрузка…');
+      try {
+        await loadNotes();
+        if (noteOverlay === overlay) showEditor();
+      } catch (e) {
+        if (e.code === 401) {
+          resetToken();
+          showGate();
+        } else {
+          showMessage(e.code === 'network'
+            ? 'Воркер недоступен.'
+            : 'Не удалось загрузить заметки.');
+        }
+      }
+    })();
+  }
+
+  // Плавающая кнопка «+» — общий блокнот
+  function setupNotesFab() {
+    const fab = document.createElement('button');
+    fab.type = 'button';
+    fab.className = 'notes-fab';
+    fab.setAttribute('aria-label', 'Блокнот');
+    fab.innerHTML =
+      '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
+    fab.addEventListener('click', () => {
+      openNoteEditor({ title: 'Блокнот', scope: 'general' });
+    });
+    document.body.appendChild(fab);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeNoteEditor();
+    });
+  }
+
   // Собирает одну строку: «дата · минуты» + бейдж статуса, название, плеер
   function buildAudioRow(f, list) {
     const row = document.createElement('div');
@@ -631,7 +873,36 @@
 
     const title = document.createElement('div');
     title.className = 'audio-title';
-    title.textContent = f.title || f.name;
+    title.appendChild(document.createTextNode(f.title || f.name));
+
+    // «+» сразу после названия — заметка к этой записи
+    const noteBtn = document.createElement('button');
+    noteBtn.type = 'button';
+    noteBtn.className = 'note-add';
+    noteBtn.setAttribute('aria-label', 'Заметка к записи');
+    noteBtn.textContent = '+';
+    title.append(' ', noteBtn);
+
+    // Текст заметки под названием, если она есть
+    const noteEl = document.createElement('div');
+    noteEl.className = 'audio-note';
+    noteEl.hidden = true;
+
+    function refreshNote() {
+      const t = (notes && notes.audio[f.id]) || '';
+      noteEl.textContent = t;
+      noteEl.hidden = !t;
+      noteBtn.classList.toggle('note-add--filled', !!t);
+    }
+    noteBtn.addEventListener('click', () => {
+      openNoteEditor({
+        title: f.title || f.name,
+        scope: 'audio',
+        id: f.id,
+        onSaved: refreshNote,
+      });
+    });
+    row.refreshNote = refreshNote;
 
     const audio = document.createElement('audio');
     audio.className = 'audio-player';
@@ -642,7 +913,7 @@
       AUDIO_API + '/audio/' + encodeURIComponent(f.id) +
       '?t=' + encodeURIComponent(audioToken);
 
-    row.append(meta, title, audio);
+    row.append(meta, title, noteEl, audio);
 
     let saved = loadPos(f.id);   // с какой секунды продолжать
     let lastSaved = saved;       // что уже лежит в localStorage
@@ -810,6 +1081,9 @@
 
     container.appendChild(list);
     fillDurations(files, rows);
+
+    // Заметки подтягиваем отдельно: если не загрузились — список всё равно работает
+    loadNotes().then(() => rows.forEach((r) => r.refreshNote())).catch(() => {});
   }
 
 
@@ -893,4 +1167,5 @@
 
   init();
   setupGlossaryHandlers();
+  setupNotesFab();
 })();
