@@ -630,10 +630,35 @@ body {
   color: var(--ink-soft);
 }
 
-.audio-badge--playing img {
+/* Эквалайзер «играет»: три столбика, анимируются только через transform */
+.eq {
   display: block;
-  width: 22px;
+  width: 19px;
   height: 22px;
+}
+
+.eq svg {
+  display: block;
+  overflow: visible;
+}
+
+.eq-bar {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: eq-bounce 1s ease-in-out infinite;
+}
+
+.eq-bar--1 { animation-duration: 0.7s;  animation-delay: -0.3s; }
+.eq-bar--2 { animation-duration: 1.0s;  animation-delay: 0s; }
+.eq-bar--3 { animation-duration: 0.85s; animation-delay: -0.6s; }
+
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(0.3); }
+  50%      { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq-bar { animation: none; }
 }
 
 /* --- иконки в заголовках разделов --- */
@@ -672,12 +697,12 @@ body {
   height: 52px;
   border-radius: 50%;
   border: none;
-  background: var(--mark);
-  color: #FFFFFF;
+  background: var(--paper);
+  color: var(--ink);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   z-index: 50;
   -webkit-tap-highlight-color: transparent;
@@ -695,16 +720,16 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: max(16px, env(safe-area-inset-top)) 16px 16px;
+  padding: max(16px, env(safe-area-inset-top)) 0 0;
   z-index: 300;
 }
 
 .note-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 600px;
   background: #F1EEE6;
-  border-radius: 4px;
-  padding: 14px 18px 18px;
+  border-radius: 0;
+  padding: 14px 0 16px;
 }
 
 .note-head {
@@ -713,6 +738,7 @@ body {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+  padding: 0 14px;
 }
 
 .note-head-title {
@@ -735,9 +761,11 @@ body {
   line-height: 1.55;
   color: var(--ink);
   background: rgba(255, 255, 255, 0.5);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  padding: 10px 12px;
+  border: none;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 12px 14px;
 }
 
 .note-input:focus {
@@ -751,6 +779,7 @@ body {
   justify-content: space-between;
   gap: 12px;
   margin-top: 12px;
+  padding: 0 14px;
 }
 
 .note-status {
@@ -804,12 +833,6 @@ body {
   inset: -10px;
 }
 
-/* у записи уже есть заметка */
-.note-add--filled {
-  background: var(--ink-soft);
-  color: var(--paper);
-}
-
 .audio-note {
   font-family: 'PT Serif', Georgia, serif;
   font-style: italic;
@@ -818,5 +841,5 @@ body {
   color: var(--ink-soft);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  margin: -4px 0 11px;
+  margin: 12px 0 0;
 }

@@ -892,7 +892,6 @@
       const t = (notes && notes.audio[f.id]) || '';
       noteEl.textContent = t;
       noteEl.hidden = !t;
-      noteBtn.classList.toggle('note-add--filled', !!t);
     }
     noteBtn.addEventListener('click', () => {
       openNoteEditor({
@@ -913,19 +912,29 @@
       AUDIO_API + '/audio/' + encodeURIComponent(f.id) +
       '?t=' + encodeURIComponent(audioToken);
 
-    row.append(meta, title, noteEl, audio);
+    row.append(meta, title, audio, noteEl);
 
     let saved = loadPos(f.id);   // с какой секунды продолжать
     let lastSaved = saved;       // что уже лежит в localStorage
     let applied = false;         // перемотались ли на сохранённую позицию
     let playing = false;         // идёт ли воспроизведение сейчас
 
-    // Иконка «играет» — показывается в углу вместо бейджа
-    const waveImg = document.createElement('img');
-    waveImg.src = 'images/icon_aWave_44.png';
-    waveImg.alt = 'играет';
-    waveImg.width = 22;
-    waveImg.height = 22;
+    // Иконка «играет» — три столбика эквалайзера, показываются в углу вместо бейджа.
+    // Каждый столбик — две половинки (тёмная сверху, светлая снизу) вокруг средней линии;
+    // анимация — только CSS transform: scaleY (см. style.css).
+    const waveImg = document.createElement('span');
+    waveImg.className = 'eq';
+    waveImg.setAttribute('role', 'img');
+    waveImg.setAttribute('aria-label', 'играет');
+    waveImg.innerHTML =
+      '<svg width="19" height="22" viewBox="0 0 14 16" aria-hidden="true">' +
+      '<g class="eq-bar eq-bar--1"><rect x="0" y="4" width="4" height="4" fill="#A89098"/>' +
+      '<rect x="0" y="8" width="4" height="4" fill="#C9BBBA"/></g>' +
+      '<g class="eq-bar eq-bar--2"><rect x="5" y="0" width="4" height="8" fill="#A89098"/>' +
+      '<rect x="5" y="8" width="4" height="8" fill="#C9BBBA"/></g>' +
+      '<g class="eq-bar eq-bar--3"><rect x="10" y="3" width="4" height="5" fill="#A89098"/>' +
+      '<rect x="10" y="8" width="4" height="5" fill="#C9BBBA"/></g>' +
+      '</svg>';
 
     // «42 мин»: длительность из воркера (KV), иначе — из самого плеера
     function paintMeta() {
