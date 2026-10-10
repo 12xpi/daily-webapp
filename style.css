@@ -588,10 +588,16 @@ body {
 }
 
 .audio-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   font-family: 'PT Serif', Georgia, serif;
   font-size: 17px;
   line-height: 1.4;
-  margin-bottom: 11px;
+}
+
+.audio-title-text {
+  min-width: 0;
   overflow-wrap: break-word;
 }
 
@@ -842,4 +848,230 @@ body {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   margin: 12px 0 0;
+}
+
+/* --- свой плеер --- */
+
+.audio-row [hidden] {
+  display: none !important;
+}
+
+/* ▶ перед названием: раскрывает плеер */
+.audio-open {
+  position: relative;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0 0 0 -2px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #A89098;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.audio-open::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+.audio-open svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.ap {
+  margin-top: 16px;
+}
+
+.ap-seek {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ap-time {
+  flex: none;
+  min-width: 42px;
+  font-family: 'PT Sans', -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.ap-time--end {
+  text-align: right;
+}
+
+/* Ползунок: сыгранная часть — розовая, подгруженная — светлее, остальное — тёмное.
+   --p и --b (доли 0..1) выставляет JS; 10px — половина ширины бегунка. */
+.ap-range {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  --p: 0;
+  --b: 0;
+}
+
+.ap-range:focus {
+  outline: none;
+}
+
+.ap-range:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ap-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    #A89098 calc(10px + (100% - 20px) * var(--p)),
+    #8A857B calc(10px + (100% - 20px) * var(--p)),
+    #8A857B calc(10px + (100% - 20px) * var(--b)),
+    #5E5B54 calc(10px + (100% - 20px) * var(--b))
+  );
+}
+
+.ap-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  border: none;
+  border-radius: 50%;
+  background: #A89098;
+}
+
+.ap-range::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #5E5B54;
+}
+
+.ap-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: #A89098;
+}
+
+.ap-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: #A89098;
+}
+
+.ap-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  margin-top: 6px;
+}
+
+.ap-skip {
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #4A4640;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ap-skip svg {
+  width: 46px;
+  height: 46px;
+  display: block;
+}
+
+.ap-skip:active {
+  opacity: 0.6;
+}
+
+.ap-main {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #A89098;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ap-main svg {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  display: block;
+}
+
+.ap-main .ic-pause,
+.ap-main .ap-spin {
+  display: none;
+}
+
+.ap-controls.is-playing .ic-play {
+  display: none;
+}
+
+.ap-controls.is-playing .ic-pause {
+  display: block;
+}
+
+/* Загрузка: вместо значка — крутилка (анимируется только transform) */
+.ap-controls.is-loading .ap-main svg {
+  display: none !important;
+}
+
+.ap-controls.is-loading .ap-spin {
+  display: block;
+}
+
+.ap-spin {
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #FFFFFF;
+  animation: ap-rotate 0.8s linear infinite;
+}
+
+@keyframes ap-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.ap-error {
+  margin-top: 8px;
+  text-align: center;
+  font-family: 'PT Sans', -apple-system, sans-serif;
+  font-size: 13px;
+  color: #9C5A5A;
 }

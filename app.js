@@ -859,7 +859,36 @@
     });
   }
 
-  // Собирает одну строку: «дата · минуты» + бейдж статуса, название, плеер
+  // 3725 -> "1:02:05", 725 -> "12:05", 0 -> "00:00" (формат плеера, как на макете)
+  function fmtTime(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return h ? `${h}:${pad2(m)}:${pad2(s)}` : `${pad2(m)}:${pad2(s)}`;
+  }
+
+  const ICON_OPEN =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>';
+
+  // Круговая стрелка с «10»: вперёд — по часовой, назад — зеркально (цифры не зеркалим)
+  function iconSkip(forward) {
+    const flip = forward ? '' : ' transform="translate(24 0) scale(-1 1)"';
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+      '<g' + flip + ' fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">' +
+      '<path d="M17.36 8.5A7 7 0 1 1 12 6"/>' +
+      '<path d="M12 2.8 16.2 6 12 9.2z" fill="currentColor" stroke-linejoin="round"/></g>' +
+      '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="700" ' +
+      'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
+  }
+
+  const ICON_PLAY =
+    '<svg class="ic-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>';
+  const ICON_PAUSE =
+    '<svg class="ic-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.4z" fill="currentColor"/></svg>';
+
+  // Собирает одну строку: «дата · минуты» + бейдж статуса, название с кнопкой ▶,
+  // плеер (скрыт, пока не нажали ▶) и заметка
   function buildAudioRow(f, list) {
     const row = document.createElement('div');
     row.className = 'audio-row';
@@ -871,9 +900,18 @@
     badge.className = 'audio-badge';
     meta.append(metaText, badge);
 
+    // ▶ перед названием: раскрывает плеер и сама исчезает
+    const openBtn = document.createElement('button');
+    openBtn.type = 'button';
+    openBtn.className = 'audio-open';
+    openBtn.setAttribute('aria-label', 'Показать плеер');
+    openBtn.innerHTML = ICON_OPEN;
+
     const title = document.createElement('div');
     title.className = 'audio-title';
-    title.appendChild(document.createTextNode(f.title || f.name));
+    const titleText = document.createElement('span');
+    titleText.className = 'audio-title-text';
+    titleText.appendChild(document.createTextNode(f.title || f.name));
 
     // «+» сразу после названия — заметка к этой записи
     const noteBtn = document.createElement('button');
@@ -881,9 +919,10 @@
     noteBtn.className = 'note-add';
     noteBtn.setAttribute('aria-label', 'Заметка к записи');
     noteBtn.textContent = '+';
-    title.append(' ', noteBtn);
+    titleText.append(' ', noteBtn);
+    title.append(openBtn, titleText);
 
-    // Текст заметки под названием, если она есть
+    // Текст заметки под плеером, если она есть
     const noteEl = document.createElement('div');
     noteEl.className = 'audio-note';
     noteEl.hidden = true;
@@ -903,21 +942,70 @@
     });
     row.refreshNote = refreshNote;
 
+    // Сам звук — без родных controls, интерфейс рисуем сами.
     const audio = document.createElement('audio');
     audio.className = 'audio-player';
-    audio.controls = true;
     // Именно none: иначе браузер начнёт тянуть все файлы при раскрытии.
     audio.preload = 'none';
     audio.src =
       AUDIO_API + '/audio/' + encodeURIComponent(f.id) +
       '?t=' + encodeURIComponent(audioToken);
 
-    row.append(meta, title, audio, noteEl);
+    // --- интерфейс плеера (по умолчанию скрыт) ---
+    const ap = document.createElement('div');
+    ap.className = 'ap';
+    ap.hidden = true;
+
+    const seek = document.createElement('div');
+    seek.className = 'ap-seek';
+    const curEl = document.createElement('span');
+    curEl.className = 'ap-time';
+    curEl.textContent = '00:00';
+    const range = document.createElement('input');
+    range.type = 'range';
+    range.className = 'ap-range';
+    range.min = 0;
+    range.max = 1;
+    range.step = 'any';
+    range.value = 0;
+    range.setAttribute('aria-label', 'Позиция в записи');
+    const durEl = document.createElement('span');
+    durEl.className = 'ap-time ap-time--end';
+    durEl.textContent = '--:--';
+    seek.append(curEl, range, durEl);
+
+    const controls = document.createElement('div');
+    controls.className = 'ap-controls';
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'ap-skip';
+    backBtn.setAttribute('aria-label', 'Назад на 10 секунд');
+    backBtn.innerHTML = iconSkip(false);
+    const mainBtn = document.createElement('button');
+    mainBtn.type = 'button';
+    mainBtn.className = 'ap-main';
+    mainBtn.innerHTML = ICON_PLAY + ICON_PAUSE + '<span class="ap-spin" aria-hidden="true"></span>';
+    const fwdBtn = document.createElement('button');
+    fwdBtn.type = 'button';
+    fwdBtn.className = 'ap-skip';
+    fwdBtn.setAttribute('aria-label', 'Вперёд на 10 секунд');
+    fwdBtn.innerHTML = iconSkip(true);
+    controls.append(backBtn, mainBtn, fwdBtn);
+
+    const errorEl = document.createElement('div');
+    errorEl.className = 'ap-error';
+    errorEl.hidden = true;
+
+    ap.append(seek, controls, errorEl);
+
+    row.append(meta, title, ap, noteEl, audio);
 
     let saved = loadPos(f.id);   // с какой секунды продолжать
     let lastSaved = saved;       // что уже лежит в localStorage
     let applied = false;         // перемотались ли на сохранённую позицию
     let playing = false;         // идёт ли воспроизведение сейчас
+    let loading = false;         // ждём звук: первая загрузка или буферизация
+    let dragging = false;        // пользователь тянет ползунок
 
     // Иконка «играет» — три столбика эквалайзера, показываются в углу вместо бейджа.
     // Каждый столбик — две половинки (тёмная сверху, светлая снизу) вокруг средней линии;
@@ -936,11 +1024,58 @@
       '<rect x="10" y="8" width="4" height="5" fill="#C9BBBA"/></g>' +
       '</svg>';
 
+    function durNow() {
+      return f.duration || (Number.isFinite(audio.duration) ? audio.duration : 0);
+    }
+
+    // Пока метаданные не загружены, «текущее место» — это точка, с которой продолжим
+    function curNow() {
+      return audio.readyState >= 1 ? audio.currentTime : saved;
+    }
+
     // «42 мин»: длительность из воркера (KV), иначе — из самого плеера
     function paintMeta() {
-      const dur = f.duration || (Number.isFinite(audio.duration) ? audio.duration : 0);
+      const dur = durNow();
       const mins = dur ? Math.max(1, Math.round(dur / 60)) + ' мин' : '';
       metaText.textContent = [fmtDate(f.modifiedTime), mins].filter(Boolean).join(' · ');
+    }
+
+    // Ползунок, время слева/справа, подгруженная часть дорожки
+    function paintProgress() {
+      const dur = durNow();
+      const cur = dragging ? Number(range.value) : Math.min(curNow(), dur || curNow());
+
+      range.max = dur || 1;
+      range.disabled = !dur;
+      if (!dragging) range.value = cur;
+
+      curEl.textContent = fmtTime(cur);
+      durEl.textContent = dur ? fmtTime(dur) : '--:--';
+
+      const ratio = dur ? Math.min(1, cur / dur) : 0;
+      let buf = 0;
+      try {
+        const br = audio.buffered;
+        for (let i = 0; i < br.length; i++) {
+          if (br.start(i) <= cur + 1 && br.end(i) >= cur) buf = br.end(i);
+        }
+      } catch (e) {}
+      range.style.setProperty('--p', String(ratio));
+      range.style.setProperty('--b', String(Math.max(ratio, dur ? Math.min(1, buf / dur) : 0)));
+    }
+
+    // Кнопка ▶ / ❚❚ / крутилка загрузки
+    function paintControls() {
+      controls.classList.toggle('is-playing', !audio.paused);
+      controls.classList.toggle('is-loading', loading);
+      mainBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
+      mainBtn.setAttribute('aria-label',
+        loading ? 'Загрузка…' : (audio.paused ? 'Воспроизвести' : 'Пауза'));
+    }
+
+    function showError(text) {
+      errorEl.textContent = text;
+      errorEl.hidden = !text;
     }
 
     // new / @ 13 / ✓
@@ -972,10 +1107,88 @@
     row.setDuration = (sec) => {
       f.duration = sec;
       paintMeta();
+      paintProgress();
     };
 
     paintMeta();
     paintBadge();
+    paintProgress();
+    paintControls();
+
+    // Свернуть плеер: ставим на паузу и возвращаем ▶ у названия
+    row.collapse = () => {
+      audio.pause();
+      ap.hidden = true;
+      openBtn.hidden = false;
+    };
+
+    // ▶ у названия: сворачиваем плеер другой записи, раскрываем этот и сразу играем.
+    // Нажатие — жест пользователя, поэтому iOS разрешает play() прямо здесь.
+    openBtn.addEventListener('click', () => {
+      const topBefore = row.getBoundingClientRect().top;
+
+      list.querySelectorAll('.audio-row').forEach((other) => {
+        if (other !== row && other.collapse) other.collapse();
+      });
+
+      openBtn.hidden = true;
+      ap.hidden = false;
+      paintProgress();
+      paintControls();
+      startPlayback();
+
+      // Если свернувшийся плеер был выше, строка «уехала» вверх — возвращаем её под палец
+      const shift = row.getBoundingClientRect().top - topBefore;
+      if (Math.abs(shift) > 1) window.scrollBy(0, shift);
+    });
+
+    // Перемотка. Пока файл не загружен, просто запоминаем точку старта —
+    // seekToSaved применит её, когда придут метаданные.
+    function seekTo(t) {
+      const dur = durNow();
+      t = Math.max(0, dur ? Math.min(t, dur) : t);
+      if (audio.readyState >= 1) {
+        try {
+          audio.currentTime = t;
+        } catch (e) {}
+      } else {
+        saved = t;
+      }
+      paintProgress();
+    }
+
+    function startPlayback() {
+      showError('');
+      loading = true;   // крутилка сразу после нажатия, пока не пойдёт звук
+      paintControls();
+      const p = audio.play();
+      if (p && p.catch) {
+        p.catch((e) => {
+          if (e && e.name === 'AbortError') return;   // нас остановил другой плеер
+          loading = false;
+          paintControls();
+          showError('Не удалось начать воспроизведение.');
+        });
+      }
+    }
+
+    mainBtn.addEventListener('click', () => {
+      if (audio.paused) startPlayback();
+      else audio.pause();
+    });
+
+    backBtn.addEventListener('click', () => seekTo(curNow() - 10));
+    fwdBtn.addEventListener('click', () => seekTo(curNow() + 10));
+
+    // Пока тянем — только обновляем цифры, перематываем один раз при отпускании
+    range.addEventListener('input', () => {
+      dragging = true;
+      paintProgress();
+    });
+    range.addEventListener('change', () => {
+      dragging = false;
+      seekTo(Number(range.value));
+    });
 
     // Перематываем один раз, когда браузер узнал длительность.
     // Страховка на canplay нужна для iOS: там loadedmetadata иногда
@@ -997,10 +1210,19 @@
       }
       paintMeta();
       paintBadge();
+      paintProgress();
     }
 
     audio.addEventListener('loadedmetadata', seekToSaved);
-    audio.addEventListener('canplay', seekToSaved);
+    audio.addEventListener('durationchange', () => { paintMeta(); paintProgress(); });
+    audio.addEventListener('canplay', () => {
+      seekToSaved();
+      // звук готов — крутилку убираем
+      if (loading && !audio.paused) {
+        loading = false;
+        paintControls();
+      }
+    });
 
     // Запоминает текущее место (или отмечает «дослушано»)
     function remember(force) {
@@ -1038,30 +1260,62 @@
       paintBadge();
     }
 
-    audio.addEventListener('timeupdate', () => remember(false));
+    audio.addEventListener('timeupdate', () => {
+      remember(false);
+      paintProgress();
+    });
+    audio.addEventListener('progress', paintProgress);
+    audio.addEventListener('seeked', paintProgress);
+
     audio.addEventListener('pause', () => {
       playing = false;
+      loading = false;
       if (!audio.ended) remember(true);
       paintBadge();
+      paintControls();
+      paintProgress();
     });
 
     audio.addEventListener('ended', () => {
       playing = false;
+      loading = false;
       clearPos(f.id);
       setDone(f.id, true);
       saved = 0;
       lastSaved = 0;
       applied = true;
       paintBadge();
+      paintControls();
+      paintProgress();
     });
 
     // Один плеер за раз: запуск нового останавливает предыдущий.
     audio.addEventListener('play', () => {
       playing = true;
       paintBadge();
+      paintControls();
       list.querySelectorAll('audio').forEach((other) => {
         if (other !== audio) other.pause();
       });
+    });
+
+    // Загрузка/буферизация: крутилка вместо кнопки, пока звука нет
+    audio.addEventListener('playing', () => {
+      loading = false;
+      paintControls();
+    });
+    audio.addEventListener('waiting', () => {
+      if (!audio.paused) {
+        loading = true;
+        paintControls();
+      }
+    });
+    audio.addEventListener('error', () => {
+      loading = false;
+      playing = false;
+      paintBadge();
+      paintControls();
+      showError('Не удалось загрузить запись. Проверьте соединение.');
     });
 
     return row;
