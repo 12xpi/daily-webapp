@@ -898,7 +898,7 @@ body {
 
 .ap-time {
   flex: none;
-  min-width: 42px;
+  min-width: 50px;
   font-family: 'PT Sans', -apple-system, sans-serif;
   font-size: 14px;
   color: var(--ink);

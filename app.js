@@ -406,7 +406,7 @@
   }
 
   function fmtSize(bytes) {
-    if (!bytes) return '';
+    bytes = Number(bytes) || 0;
     const mb = bytes / 1048576;
     return mb >= 1 ? mb.toFixed(1) + ' МБ' : Math.round(bytes / 1024) + ' КБ';
   }
@@ -1040,6 +1040,32 @@
       metaText.textContent = [fmtDate(f.modifiedTime), mins].filter(Boolean).join(' · ');
     }
 
+    function getBufferedSec() {
+      try {
+        const cur = audio.currentTime || 0;
+        const br = audio.buffered;
+        for (let i = 0; i < br.length; i++) {
+          if (br.start(i) <= cur + 1 && br.end(i) >= cur) {
+            return br.end(i);
+          }
+        }
+        if (br.length > 0) {
+          return br.end(br.length - 1);
+        }
+      } catch (e) {}
+      return 0;
+    }
+
+    function getLoadedBytes() {
+      const buf = getBufferedSec();
+      const dur = durNow();
+      const totalSize = Number(f.size) || (dur ? dur * 16000 : 0);
+      if (totalSize > 0 && dur > 0) {
+        return Math.min(totalSize, Math.round((buf / dur) * totalSize));
+      }
+      return 0;
+    }
+
     // Ползунок, время слева/справа, подгруженная часть дорожки
     function paintProgress() {
       const dur = durNow();
@@ -1050,7 +1076,8 @@
       if (!dragging) range.value = cur;
 
       curEl.textContent = fmtTime(cur);
-      durEl.textContent = dur ? fmtTime(dur) : '--:--';
+      const remaining = dur ? Math.max(0, dur - cur) : 0;
+      durEl.textContent = dur ? '-' + fmtTime(remaining) : '--:--';
 
       const ratio = dur ? Math.min(1, cur / dur) : 0;
       let buf = 0;
@@ -1078,9 +1105,14 @@
       errorEl.hidden = !text;
     }
 
-    // new / @ 13 / ✓
+    // new / @ 13 / ✓ / байты загрузки / эквалайзер
     function paintBadge() {
       if (playing) {
+        if (loading) {
+          badge.className = 'audio-badge audio-badge--pos';
+          badge.textContent = fmtSize(getLoadedBytes());
+          return;
+        }
         badge.className = 'audio-badge audio-badge--playing';
         if (badge.firstChild !== waveImg) {
           badge.textContent = '';
@@ -1161,12 +1193,14 @@
       showError('');
       loading = true;   // крутилка сразу после нажатия, пока не пойдёт звук
       paintControls();
+      paintBadge();
       const p = audio.play();
       if (p && p.catch) {
         p.catch((e) => {
           if (e && e.name === 'AbortError') return;   // нас остановил другой плеер
           loading = false;
           paintControls();
+          paintBadge();
           showError('Не удалось начать воспроизведение.');
         });
       }
@@ -1221,6 +1255,7 @@
       if (loading && !audio.paused) {
         loading = false;
         paintControls();
+        paintBadge();
       }
     });
 
@@ -1264,7 +1299,10 @@
       remember(false);
       paintProgress();
     });
-    audio.addEventListener('progress', paintProgress);
+    audio.addEventListener('progress', () => {
+      paintProgress();
+      if (playing && loading) paintBadge();
+    });
     audio.addEventListener('seeked', paintProgress);
 
     audio.addEventListener('pause', () => {
@@ -1303,11 +1341,13 @@
     audio.addEventListener('playing', () => {
       loading = false;
       paintControls();
+      paintBadge();
     });
     audio.addEventListener('waiting', () => {
       if (!audio.paused) {
         loading = true;
         paintControls();
+        paintBadge();
       }
     });
     audio.addEventListener('error', () => {
