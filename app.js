@@ -875,10 +875,10 @@
   function iconSkip(forward) {
     const flip = forward ? '' : ' transform="translate(24 0) scale(-1 1)"';
     return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-      '<g' + flip + ' fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">' +
+      '<g' + flip + ' fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
       '<path d="M17.36 8.5A7 7 0 1 1 12 6"/>' +
-      '<path d="M12 2.8 16.2 6 12 9.2z" fill="currentColor" stroke-linejoin="round"/></g>' +
-      '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="700" ' +
+      '<path d="M12.5 3.3 16.2 6 12.5 8.7z" fill="currentColor" stroke-linejoin="round"/></g>' +
+      '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="600" ' +
       'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
   }
 

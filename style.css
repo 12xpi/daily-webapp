@@ -991,7 +991,7 @@ body {
   padding: 0;
   border: none;
   background: none;
-  color: #4A4640;
+  color: var(--ink-soft);
   display: flex;
   align-items: center;
   justify-content: center;
