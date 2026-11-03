@@ -1211,8 +1211,25 @@
       else audio.pause();
     });
 
-    backBtn.addEventListener('click', () => seekTo(curNow() - 10));
-    fwdBtn.addEventListener('click', () => seekTo(curNow() + 10));
+    backBtn.addEventListener('click', () => {
+      seekTo(curNow() - 10);
+      backBtn.classList.remove('is-spinning-ccw');
+      void backBtn.offsetWidth;
+      backBtn.classList.add('is-spinning-ccw');
+    });
+    backBtn.addEventListener('animationend', () => {
+      backBtn.classList.remove('is-spinning-ccw');
+    });
+
+    fwdBtn.addEventListener('click', () => {
+      seekTo(curNow() + 10);
+      fwdBtn.classList.remove('is-spinning-cw');
+      void fwdBtn.offsetWidth;
+      fwdBtn.classList.add('is-spinning-cw');
+    });
+    fwdBtn.addEventListener('animationend', () => {
+      fwdBtn.classList.remove('is-spinning-cw');
+    });
 
     // Пока тянем — только обновляем цифры, перематываем один раз при отпускании
     range.addEventListener('input', () => {

@@ -1009,6 +1009,24 @@ body {
   opacity: 0.6;
 }
 
+@keyframes ap-spin-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ap-spin-ccw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+.ap-skip.is-spinning-cw svg {
+  animation: ap-spin-cw 0.35s ease;
+}
+
+.ap-skip.is-spinning-ccw svg {
+  animation: ap-spin-ccw 0.35s ease;
+}
+
 .ap-main {
   position: relative;
   width: 58px;
