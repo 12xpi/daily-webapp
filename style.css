@@ -1009,9 +1009,11 @@ body {
   opacity: 0.6;
 }
 
+/* Нажатие: кольцо со стрелкой делает полный оборот (вперёд — по часовой,
+   назад — против), «10» остаётся неподвижной */
 .ap-skip-wheel {
   transform-box: view-box;
-  transform-origin: 12px 12px;
+  transform-origin: 12px 13px;
 }
 
 @keyframes ap-spin-cw {
@@ -1025,11 +1027,18 @@ body {
 }
 
 .ap-skip.is-spinning-cw .ap-skip-wheel {
-  animation: ap-spin-cw 0.35s ease;
+  animation: ap-spin-cw 0.45s ease-in-out;
 }
 
 .ap-skip.is-spinning-ccw .ap-skip-wheel {
-  animation: ap-spin-ccw 0.35s ease;
+  animation: ap-spin-ccw 0.45s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-skip.is-spinning-cw .ap-skip-wheel,
+  .ap-skip.is-spinning-ccw .ap-skip-wheel {
+    animation: none;
+  }
 }
 
 .ap-main {

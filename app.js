@@ -871,36 +871,32 @@
   const ICON_OPEN =
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>';
 
-  // Круговая стрелка с «10»: вперёд — по часовой, назад — зеркально (цифры не зеркалим)
-  // Иконка со скорректированными дугами: удалены верхние участки окружности у стрелки (соответствует красным пометкам)
+  // Круговая стрелка в стиле iOS (gobackward.10 / goforward.10): почти полное кольцо
+  // с разрывом сверху, стрелка на верхнем конце, «10» внутри.
+  // Вперёд — по часовой, назад — зеркально (цифры не зеркалим).
+  // Кольцо со стрелкой — группа .ap-skip-wheel (крутится по клику), «10» — отдельно и стоит на месте.
   function iconSkip(forward) {
+    const text =
+      '<text x="12" y="15.75" text-anchor="middle" font-size="7.6" font-weight="700" ' +
+      'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text>';
+    const head =
+      '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+      '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.6" ' +
+      'stroke-linecap="round" stroke-linejoin="round">';
     if (forward) {
-      return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-        '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
-        // Правая дуга (от правого фланга до низа)
-        '<path d="M 17.36 8.5 A 7 7 0 0 1 12 19"/>' +
-        // Левая дуга (от низа до левого фланга)
-        '<path d="M 12 19 A 7 7 0 0 1 6.64 8.5"/>' +
-        // Верхняя стрелка вправо
-        '<path d="M 9.5 2.5 L 13.5 5 L 9.5 7.5" fill="currentColor" stroke-linejoin="round"/>' +
-        // Нижняя стрелка вправо (невидимая для сохранения симметрии bbox)
-        '<path d="M 14.5 16.5 L 10.5 19 L 14.5 21.5" fill="currentColor" stroke-linejoin="round" opacity="0"/></g>' +
-        '<text x="12" y="14.6" text-anchor="middle" font-size="7.6" font-weight="600" ' +
-        'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
-    } else {
-      return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-        '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
-        // Левая дуга (от левого фланга до низа)
-        '<path d="M 6.64 8.5 A 7 7 0 0 0 12 19"/>' +
-        // Правая дуга (от низа до правого фланга)
-        '<path d="M 12 19 A 7 7 0 0 0 17.36 8.5"/>' +
-        // Верхняя стрелка влево
-        '<path d="M 14.5 2.5 L 10.5 5 L 14.5 7.5" fill="currentColor" stroke-linejoin="round"/>' +
-        // Нижняя стрелка влево (невидимая для сохранения симметрии bbox)
-        '<path d="M 9.5 16.5 L 13.5 19 L 9.5 21.5" fill="currentColor" stroke-linejoin="round" opacity="0"/></g>' +
-        '<text x="12" y="14.6" text-anchor="middle" font-size="7.6" font-weight="600" ' +
-        'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
+      return head +
+        // Дуга: от основания стрелки против часовой вокруг до правого верхнего конца
+        '<path d="M 10.8 5.09 A 8 8 0 1 0 17.14 6.87"/>' +
+        // Стрелка вправо
+        '<path d="M 10.6 2.6 L 14.4 5.05 L 10.6 7.5 Z" fill="currentColor" stroke-width="1.1"/>' +
+        '</g>' + text + '</svg>';
     }
+    return head +
+      // Дуга: от основания стрелки по часовой вокруг до левого верхнего конца
+      '<path d="M 13.2 5.09 A 8 8 0 1 1 6.86 6.87"/>' +
+      // Стрелка влево
+      '<path d="M 13.4 2.6 L 9.6 5.05 L 13.4 7.5 Z" fill="currentColor" stroke-width="1.1"/>' +
+      '</g>' + text + '</svg>';
   }
 
   const ICON_PLAY =
