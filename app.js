@@ -873,13 +873,21 @@
 
   // Круговая стрелка с «10»: вперёд — по часовой, назад — зеркально (цифры не зеркалим)
   function iconSkip(forward) {
-    const flip = forward ? '' : ' transform="translate(24 0) scale(-1 1)"';
-    return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-      '<g class="ap-skip-wheel"' + flip + ' fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
-      '<path d="M17.36 8.5A7 7 0 1 1 12 6"/>' +
-      '<path d="M12.5 3.3 16.2 6 12.5 8.7z" fill="currentColor" stroke-linejoin="round"/></g>' +
-      '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="600" ' +
-      'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
+    if (forward) {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
+        '<path d="M17.36 8.5A7 7 0 1 1 12 6"/>' +
+        '<path d="M12.5 3.3 16.2 6 12.5 8.7z" fill="currentColor" stroke-linejoin="round"/></g>' +
+        '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="600" ' +
+        'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
+    } else {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
+        '<path d="M6.64 8.5A7 7 0 1 0 12 6"/>' +
+        '<path d="M11.5 3.3 7.8 6 11.5 8.7z" fill="currentColor" stroke-linejoin="round"/></g>' +
+        '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="600" ' +
+        'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
+    }
   }
 
   const ICON_PLAY =
