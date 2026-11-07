@@ -872,24 +872,32 @@
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>';
 
   // Круговая стрелка с «10»: вперёд — по часовой, назад — зеркально (цифры не зеркалим)
-  // Симметричная двухстрелочная кольцевая иконка с дугами, удлиненными на 30% (117°)
+  // Кольцевая иконка с дугами на боковых флангах (левый и правый) и стрелками сверху/снизу
   function iconSkip(forward) {
     if (forward) {
       return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
         '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
-        '<path d="M12 5 A 7 7 0 0 1 18.24 15.18"/>' +
-        '<path d="M12 2.8 L14.8 5 L12 7.2" fill="currentColor" stroke-linejoin="round"/>' +
-        '<path d="M12 19 A 7 7 0 0 1 5.76 8.82"/>' +
-        '<path d="M12 21.2 L9.2 19 L12 16.8" fill="currentColor" stroke-linejoin="round"/></g>' +
+        // Правая дуга (сверху вниз по правому флангу, с удлинением 30%)
+        '<path d="M 12 3.5 A 8.5 8.5 0 0 1 12 20.5"/>' +
+        // Верхняя стрелка вправо
+        '<path d="M 9.5 2.2 L 13.2 4.5 L 9.5 6.8" fill="currentColor" stroke-linejoin="round"/>' +
+        // Левая дуга (снизу вверх по левому флангу)
+        '<path d="M 12 20.5 A 8.5 8.5 0 0 1 12 3.5"/>' +
+        // Нижняя стрелка влево
+        '<path d="M 14.5 21.8 L 10.8 19.5 L 14.5 17.2" fill="currentColor" stroke-linejoin="round"/></g>' +
         '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="600" ' +
         'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
     } else {
       return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
         '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
-        '<path d="M12 5 A 7 7 0 0 0 5.76 15.18"/>' +
-        '<path d="M12 2.8 L9.2 5 L12 7.2" fill="currentColor" stroke-linejoin="round"/>' +
-        '<path d="M12 19 A 7 7 0 0 0 18.24 8.82"/>' +
-        '<path d="M12 21.2 L14.8 19 L12 16.8" fill="currentColor" stroke-linejoin="round"/></g>' +
+        // Левая дуга (сверху вниз по левому флангу против часовой)
+        '<path d="M 12 3.5 A 8.5 8.5 0 0 0 12 20.5"/>' +
+        // Верхняя стрелка влево
+        '<path d="M 14.5 2.2 L 10.8 4.5 L 14.5 6.8" fill="currentColor" stroke-linejoin="round"/>' +
+        // Правая дуга (снизу вверх по правому флангу против часовой)
+        '<path d="M 12 20.5 A 8.5 8.5 0 0 0 12 3.5"/>' +
+        // Нижняя стрелка вправо
+        '<path d="M 9.5 21.8 L 13.2 19.5 L 9.5 17.2" fill="currentColor" stroke-linejoin="round"/></g>' +
         '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="600" ' +
         'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
     }
