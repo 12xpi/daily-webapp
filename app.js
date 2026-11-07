@@ -872,7 +872,7 @@
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>';
 
   // Круговая стрелка с «10»: вперёд — по часовой, назад — зеркально (цифры не зеркалим)
-  // Иконка по рис. 2: кольцевые дуги на флангах с двумя однонаправленными стрелками (вправо для +, влево для -)
+  // Нижние наконечники сохранены в разметке для идеальной центровки bbox, но скрыты (opacity="0")
   function iconSkip(forward) {
     if (forward) {
       return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
@@ -883,8 +883,8 @@
         '<path d="M 12 19 A 7 7 0 0 1 12 5"/>' +
         // Верхняя стрелка вправо
         '<path d="M 9.5 2.5 L 13.5 5 L 9.5 7.5" fill="currentColor" stroke-linejoin="round"/>' +
-        // Нижняя стрелка вправо
-        '<path d="M 14.5 16.5 L 10.5 19 L 14.5 21.5" fill="currentColor" stroke-linejoin="round"/></g>' +
+        // Нижняя стрелка вправо (невидимая для сохранения симметрии bbox)
+        '<path d="M 14.5 16.5 L 10.5 19 L 14.5 21.5" fill="currentColor" stroke-linejoin="round" opacity="0"/></g>' +
         '<text x="12" y="14.6" text-anchor="middle" font-size="7.6" font-weight="600" ' +
         'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
     } else {
@@ -896,8 +896,8 @@
         '<path d="M 12 19 A 7 7 0 0 0 12 5"/>' +
         // Верхняя стрелка влево
         '<path d="M 14.5 2.5 L 10.5 5 L 14.5 7.5" fill="currentColor" stroke-linejoin="round"/>' +
-        // Нижняя стрелка влево
-        '<path d="M 9.5 16.5 L 13.5 19 L 9.5 21.5" fill="currentColor" stroke-linejoin="round"/></g>' +
+        // Нижняя стрелка влево (невидимая для сохранения симметрии bbox)
+        '<path d="M 9.5 16.5 L 13.5 19 L 9.5 21.5" fill="currentColor" stroke-linejoin="round" opacity="0"/></g>' +
         '<text x="12" y="14.6" text-anchor="middle" font-size="7.6" font-weight="600" ' +
         'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
     }
