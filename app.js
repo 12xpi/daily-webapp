@@ -872,32 +872,32 @@
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>';
 
   // Круговая стрелка с «10»: вперёд — по часовой, назад — зеркально (цифры не зеркалим)
-  // Уточненная кольцевая иконка: дуги без перехлестов, наконечники точно по стыкам, «10» по центру
+  // Иконка по рис. 2: кольцевые дуги на флангах с двумя однонаправленными стрелками (вправо для +, влево для -)
   function iconSkip(forward) {
     if (forward) {
       return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
         '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
-        // Правая дуга (сверху вниз по правому флангу)
-        '<path d="M 12 4 A 8 8 0 0 1 12 20"/>' +
+        // Правая дуга
+        '<path d="M 12 5 A 7 7 0 0 1 12 19"/>' +
+        // Левая дуга
+        '<path d="M 12 19 A 7 7 0 0 1 12 5"/>' +
         // Верхняя стрелка вправо
-        '<path d="M 9.5 2.5 L 12 4 L 14.5 2.5" fill="currentColor" stroke-linejoin="round"/>' +
-        // Левая дуга (снизу вверх по левому флангу)
-        '<path d="M 12 20 A 8 8 0 0 1 12 4"/>' +
-        // Нижняя стрелка влево
-        '<path d="M 14.5 21.5 L 12 20 L 9.5 21.5" fill="currentColor" stroke-linejoin="round"/></g>' +
+        '<path d="M 9.5 2.5 L 13.5 5 L 9.5 7.5" fill="currentColor" stroke-linejoin="round"/>' +
+        // Нижняя стрелка вправо
+        '<path d="M 14.5 16.5 L 10.5 19 L 14.5 21.5" fill="currentColor" stroke-linejoin="round"/></g>' +
         '<text x="12" y="14.6" text-anchor="middle" font-size="7.6" font-weight="600" ' +
         'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
     } else {
       return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
         '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
-        // Левая дуга (сверху вниз по левому флангу против часовой)
-        '<path d="M 12 4 A 8 8 0 0 0 12 20"/>' +
+        // Левая дуга
+        '<path d="M 12 5 A 7 7 0 0 0 12 19"/>' +
+        // Правая дуга
+        '<path d="M 12 19 A 7 7 0 0 0 12 5"/>' +
         // Верхняя стрелка влево
-        '<path d="M 14.5 2.5 L 12 4 L 9.5 2.5" fill="currentColor" stroke-linejoin="round"/>' +
-        // Правая дуга (снизу вверх по правому флангу против часовой)
-        '<path d="M 12 20 A 8 8 0 0 0 12 4"/>' +
-        // Нижняя стрелка вправо
-        '<path d="M 9.5 21.5 L 12 20 L 14.5 21.5" fill="currentColor" stroke-linejoin="round"/></g>' +
+        '<path d="M 14.5 2.5 L 10.5 5 L 14.5 7.5" fill="currentColor" stroke-linejoin="round"/>' +
+        // Нижняя стрелка влево
+        '<path d="M 9.5 16.5 L 13.5 19 L 9.5 21.5" fill="currentColor" stroke-linejoin="round"/></g>' +
         '<text x="12" y="14.6" text-anchor="middle" font-size="7.6" font-weight="600" ' +
         'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
     }
