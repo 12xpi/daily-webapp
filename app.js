@@ -872,22 +872,16 @@
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>';
 
   // Круговая стрелка с «10»: вперёд — по часовой, назад — зеркально (цифры не зеркалим)
+  // Симметричная двухстрелочная кольцевая иконка (габаритный центр строго 12, 12)
   function iconSkip(forward) {
-    if (forward) {
-      return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-        '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
-        '<path d="M17.36 8.5A7 7 0 1 1 12 6"/>' +
-        '<path d="M12.5 3.3 16.2 6 12.5 8.7z" fill="currentColor" stroke-linejoin="round"/></g>' +
-        '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="600" ' +
-        'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
-    } else {
-      return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-        '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
-        '<path d="M6.64 8.5A7 7 0 1 0 12 6"/>' +
-        '<path d="M11.5 3.3 7.8 6 11.5 8.7z" fill="currentColor" stroke-linejoin="round"/></g>' +
-        '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="600" ' +
-        'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
-    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+      '<g class="ap-skip-wheel" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">' +
+      '<path d="M12 5a7 7 0 0 1 7 7"/>' +
+      '<path d="M12 2.8L14.8 5L12 7.2" fill="currentColor" stroke-linejoin="round"/>' +
+      '<path d="M12 19a7 7 0 0 1-7-7"/>' +
+      '<path d="M12 21.2L9.2 19L12 16.8" fill="currentColor" stroke-linejoin="round"/></g>' +
+      '<text x="12" y="15.7" text-anchor="middle" font-size="7.6" font-weight="600" ' +
+      'fill="currentColor" font-family="PT Sans, -apple-system, sans-serif">10</text></svg>';
   }
 
   const ICON_PLAY =
